@@ -30,6 +30,14 @@ play> m
 play> p
 """
 
+"""
+Autoplay lots of game:
+$ ./p.py <<EOF | grep "Game #"
+ag
+EOF
+"""
+
+
 #import color  # for ansi color codes
 from color import colors  # for ansi color codes
 
@@ -50,6 +58,7 @@ import cmd
 import sys
 
 # global variables
+VERSION_STRING            = "1.0"  # for about command
 TOURNAMENT_COMMAND_QUEUE  = "" # auto-commanding when needed
 GAME_COMMAND_QUEUE        = "" # auto-commanding when needed
 PLAY_COMMAND_QUEUE        = "" # auto-commanding when needed
@@ -82,7 +91,7 @@ class Card(object):
         self.hand = hand         # which hand is this card in
         self.position = position # which position in the hand this card is in
 
-    def is_card_movable(sourcecard, destinationcard):
+    def is_card_movable(self, sourcecard, destinationcard):
         """" determine if source card can be moved to desitnation card
              return a value of the move and if can be moved """
 
@@ -217,18 +226,37 @@ class Card(object):
             else:
 
                 # check for king (==13) onto empty stack (==0) and
-                # not an empty pile
+                # not an empty pile (pile was check for and excluded above)
                 if sourcecard.rank == 13 and \
                    destinationcard.rank == 0:
 
+                    # check for a deck king move (always allowed)
+                    if sourcecard.hand.name == "Deck":
+
+                        # this source king is on top of deck
+                        # so mark it as a move
+
+                        value = 600  # higher value is lower priority
+                        return value, True  # this is a worthwhile
+                                            # movable king
+
                     # check for king already at top of stack with
                     # stack having an empty (rank=0) card on top
-                    if not sourcecard.hand.cards[0].rank == 0:
+                    # remember: stacks always have an empty card in
+                    #           position [0] so a top of stack king
+                    #           is in position [1]
+                    elif not sourcecard.hand.cards[1].rank == 13:
+
+                        # this source king is not at top of a stack
+                        # so mark it as a move
 
                         value = 700  # higher value is lower priority
                         return value, True  # this is a worthwhile
                                             # movable king
                     else:
+
+                        # this source king card is already at the
+                        # top of a stack so not worth moving it
 
                         return value, False # this is a not worth
                                             # it movable king
@@ -281,7 +309,7 @@ class Card(object):
                  (Card.SUITS[self.suit] == 'Spades')) else \
                 colors.text.red
 
-        return '' + fgc+ bgc+ color + '{0}{1}'.format( \
+        return '' + fgc+ bgc+ color + '{0}{1}'.format(
                   Card.RANKS[self.rank][0],
                   Card.SUITS[self.suit][0] + colors.reset) + ''
 
@@ -295,6 +323,7 @@ class Deck(object):
         self.suit = 4                  # indicate this is a no suit
                                        # hand (just like stack but
                                        # not pile)
+        self.deathcard = ""            # virtual death card
 
         for suit in range(4):          # populate cards in box order
             for rank in range(1, 14):
@@ -326,6 +355,9 @@ class Deck(object):
         for i in range(len(self.cards)):
             #_str += " " * i + str(self.cards[i]) + "\n"
             _str += str(self.cards[i]) + " "
+
+        if self.name[0] != 'P':  # suppress on piles (no deathcard on piles)
+            _str += "  dc=:" + self.deathcard + ":"
 
         return _str
 
@@ -395,7 +427,7 @@ class Deck(object):
             undodupcard = \
                  copy.deepcopy(self.cards[-1])
 
-        game.gamemoves.append( \
+        game.gamemoves.append(
         Move(
             sourcecard=copy.deepcopy(self.cards[-1]),     # move this card
             destinationcard=copy.deepcopy(self.cards[0]), # to this card
@@ -415,11 +447,15 @@ class Deck(object):
             moveid=game.movescount,              # create unique move id
             gamemove=game.movescount,            # which game move number
                                                  # this move is
-            gamestate = None))                   # game saved after this move
+            gamestate=None))                     # game saved after this move
 
         # pop top card   this was the visible card on the deck
         oldcard = self.cards.pop()    # get card on top of deck
         oldcard.visible = False       # can't see it any more
+
+        # add a virtual death card if not already set
+        if self.deathcard == "":
+            self.deathcard = oldcard.name
 
         # add a death card before popped card if not already one in deck
         nocard = True
@@ -432,7 +468,7 @@ class Deck(object):
            oldcard.rank != 0: # add if no empty card found
 
             # put an empty card of death onto deck
-            self.cards.insert(0, Card(4, 0, False, hand=game.board.deck))
+            #self.cards.insert(0, Card(4, 0, False, hand=game.board.deck))
 
             # indicate this rotate put a ne card on deck
             #   use this indicator to remove that ne card upon undoing
@@ -464,24 +500,46 @@ class Deck(object):
 
         # return False if reached a death card meaning
         # already looped through deck without a move
-        if self.cards[-1].rank == 0: # found a death card
+        print self.cards[-1].name
+        print self.deathcard
+        if self.cards[-1].name == self.deathcard:
+            playablecardfound = False # hit the death card upon this rotation
+        else:
+            playablecardfound = True
 
+        # this is old code for when the death card was a real card
+        # it is all pass now
+        # retained for historical purposes
+        if self.cards[-1].rank == 0: # found a death card
 
             # make top deck death card invisible so it does not
             # try to get played
-            self.cards[-1].visible = False
+            #self.cards[-1].visible = False
 
-            playablecardfound = False # hit the death card upon this rotation
+            #playablecardfound = False # hit the death card upon this rotation
+            pass
 
         else:
-            
-            playablecardfound = True 
+
+            #playablecardfound = True
+            pass
 
         # update the gamemove with this game
-        game.gamemoves[-1].gamestate = copy.deepcopy(game)
-        game.gamemoves[-1].gamestate.board.deck = copy.deepcopy(self)
-        game.gamemoves[-1].gamestate.gamemoves = []  # null out saved game
-                                             # moves else many games get saved
+        #game.gamemoves[-1].gamestate = copy.deepcopy(game)
+        #game.gamemoves[-1].gamestate.board.deck = copy.deepcopy(self)
+        #game.gamemoves[-1].gamestate.gamemoves = []  # null out saved game
+        #                                     # moves else many games get saved
+        # save only the part of the game that is needed for move compare
+        # get a new game
+        game.gamemoves[-1].gamestate = CardGame(board=SBoard(), deck=Deck())
+        # store current game
+        game.gamemoves[-1].gamestate.board = copy.deepcopy(game.board)
+        game.gamemoves[-1].gamestate.deck = [] # don't need this either
+        game.gamemoves[-1].gamestate.moveid = game.gamemoves[-1].moveid # save
+                                                              # this move's id
+        game.gamemoves[-1].gamestate.movescount = game.gamemoves[-1].gamemove
+                                                              # save this
+                                                              # move's count
 
         # when here:
         # 1. game updated to most recent deck rotation move
@@ -513,6 +571,11 @@ class Deck(object):
         # should be visible anyway
         if len(self.cards) > 0:
             self.cards[-1].visible = True
+
+        # reset virtual death card
+        self.deathcard = "" # no more death card
+
+        return
 
 
     def remove(self, card):
@@ -567,6 +630,9 @@ class Hand(Deck):
         self.suit = suit  # each hand has an optional suit
                         # (for example: allow only cards of this
                         # suit in this hand)
+        self.deathcard = "" 
+
+        return
 
     def add(self, card):
         """add card to self hand """
@@ -577,9 +643,8 @@ class Hand(Deck):
                                          # in hand into the card
                                          # so card knows where it is
         self.cards.append(card)
-        #print "just added card: "
-        #print card
-        #print card.hand.name
+
+        return
 
     def __str__(self):
         """Do not prefix with hand name"""
@@ -603,10 +668,10 @@ class Hand(Deck):
     def display_card(self, card=0):
         """ display card (by index) if in hand else blanks """
 
-        if (card < len(self.cards)):
+        if card < len(self.cards):
             return str(self.cards[card])
         else:
-            return ("..")
+            return ".."
 
 class Board(object):
     """ foundational board of a game class """
@@ -664,8 +729,9 @@ class SBoard(Board):
         self.stacks = [self.s1, self.s2, self.s3, self.s4,
                        self.s5, self.s6, self.s7]
         #    four put up piles of cards on board
-        self.piles  = [self.p1, self.p2, self.p3, self.p4]
+        self.piles = [self.p1, self.p2, self.p3, self.p4]
 
+        return
 
     @classmethod
     def check_board_lowlow_condition(self, game):
@@ -734,7 +800,7 @@ class SBoard(Board):
                     low1card = str(cardlist[(suit*13)+rank])
                     low1bool = True
 
-                    if (rank < 12): # don't check for next lowest if a king
+                    if rank < 12: # don't check for next lowest if a king
 
                         # look for next lowest card is visible
                         if cardlist[(suit*13)+(rank+1)].visible:
@@ -826,7 +892,7 @@ class SBoard(Board):
                     for iccard, ccard in enumerate(cpile.cards):
 
                         iocard = iccard # same position number
-                     
+
                         # get equivalent original card if any
                         try:
                             ocard = opile.cards[iocard]
@@ -849,8 +915,8 @@ class SBoard(Board):
                            (ccard.position != ocard.position) or \
                            (ccard.visible != ocard.visible):
 
-                               # found miscompare
-                               miscomparestring = \
+                            # found miscompare
+                            miscomparestring = \
                     ":" + \
                     str(currentgame.movescount) + "?" + \
                     str(ogame.movescount) + "+" + \
@@ -861,10 +927,10 @@ class SBoard(Board):
                     str(ccard.visible) + "?" + str(ocard.visible) + "|" + \
                     ":"
 
-                               # save into big string
-                               miscomparelist += miscomparestring
+                            # save into big string
+                            miscomparelist += miscomparestring
 
-        # compare in stacks 
+        # compare in stacks
         for cstack in currentgame.board.stacks: # compare cards in stacks
 
             for ostack in ogame.board.stacks: # compare cards in stacks
@@ -876,7 +942,7 @@ class SBoard(Board):
                     for iccard, ccard in enumerate(cstack.cards):
 
                         iocard = iccard # same position number
-                     
+
                         # get equivalent original card if any
                         try:
                             ocard = ostack.cards[iocard]
@@ -887,7 +953,7 @@ class SBoard(Board):
                                 rank=0, # 0 == no rank yet
                                 visible=False, # can't see me now
                                 # no known hand yet
-                                hand=Hand(name="stacknotevencloseinorginalgame"),
+                                hand=Hand(name="stacknotevencloseinorginalgme"),
                                 position=iocard) # no position yet
 
                         # when here:
@@ -899,8 +965,8 @@ class SBoard(Board):
                            (ccard.position != ocard.position) or \
                            (ccard.visible != ocard.visible):
 
-                               # found miscompare
-                               miscomparestring = \
+                            # found miscompare
+                            miscomparestring = \
                     ":" + \
                     str(currentgame.movescount) + "?" + \
                     str(ogame.movescount) + "+" + \
@@ -911,10 +977,10 @@ class SBoard(Board):
                     str(ccard.visible) + "?" + str(ocard.visible) + "|" + \
                     ":"
 
-                               # save into big string
-                               miscomparelist += miscomparestring
+                            # save into big string
+                            miscomparelist += miscomparestring
 
-        # compare in deck 
+        # compare in deck
         for icdeck in range(1): # keep loop indent structure
 
             # get current deck
@@ -932,8 +998,8 @@ class SBoard(Board):
                     for iccard, ccard in enumerate(cdeck.cards):
 
                         iocard = iccard # same position number
-                     
                         # get equivalent original card if any
+
                         try:
                             ocard = odeck.cards[iocard]
                         except IndexError:
@@ -955,8 +1021,15 @@ class SBoard(Board):
                            (ccard.position != ocard.position) or \
                            (ccard.visible != ocard.visible):
 
-                               # found miscompare
-                               miscomparestring = \
+                            if False: # True:
+                                # display deck
+                                print "original deck:"
+                                print(':' + ogame.board.deck.display_deck() + ':')
+                                print "current deck:"
+                                print(':' + currentgame.board.deck.display_deck() + ':')
+
+                            # found miscompare
+                            miscomparestring = \
                     ":" + \
                     str(currentgame.movescount) + "?" + \
                     str(ogame.movescount) + "+" + \
@@ -967,21 +1040,24 @@ class SBoard(Board):
                     str(ccard.visible) + "?" + str(ocard.visible) + "|" + \
                     ":"
 
-                               # save into big string
-                               miscomparelist += miscomparestring
+                            # save into big string # move 0 is not playable
+                            miscomparelist += miscomparestring
 
-        print "miscompare list = *" + miscomparelist + "*"
 
         if len(miscomparelist) != 0:
+            print "miscompare list = *" + miscomparelist + "*"
             print "vvvvvvvvvvvv original game vvvvvvvvvvvv"
             ogame.board.display_board(ogame) # pass in game to get access
             print "^^^^^^^^^^^^ original game ^^^^^^^^^^^^"
-                               
+            raw_input("pause")
 
         return True  # if here the board passed checks
 
     def check_board_integrity(self, game):
         """ make sure board is sane (no out of position cards) """
+
+        # start out hopeful
+        boardpassed = True # t = board has integrity
 
         # check for 52 cards
         numcards = 0
@@ -992,30 +1068,40 @@ class SBoard(Board):
                 if card.rank != 0: # don't count empty cards
                     numcards += 1
 
-        print "pile count = " + str(numcards)
+        #print "pile count = " + str(numcards)
         # count in stacks
         for stack in self.stacks: # count cards in stack
             for card in stack.cards:
                 if card.rank != 0: # don't count empty cards
                     numcards += 1
-        print "stack count = " + str(numcards)
+        #print "stack count = " + str(numcards)
 
         # count in deck
         for card in self.deck.cards: # count cards in deck
             if card.rank != 0: # don't count empty cards
                 numcards += 1
 
-        print "deck count = " + str(numcards)
+        #print "deck count = " + str(numcards)
         if numcards != 52:
             print "Expected 52 cards. Counted " + str(numcards)
-            return False # board has problems
+            boardpassed = False # board has card count problem
 
         # when here we know there are 52 card on the board
 
         # check integrity of board
         # check piles
         for pile in self.piles: # check each pile for normality
-            for card in pile.cards: # check each card in pile
+            for icard, card in enumerate(pile.cards): # check each card in pile
+
+                # check for internally consistent card position
+                if card.position != icard: # card has wrong position?
+                    print "pile " + pile.name + " " + card.name + " " + \
+                            "expected position " + str(icard) + " " + \
+                            "but card position is " + str(card.position)
+
+                    boardpassed = False # board has pile position problem
+
+                # check right suit in right pile
                 if card.rank == 0:
                     continue        # skip empty cards
                 else:
@@ -1024,45 +1110,59 @@ class SBoard(Board):
                               str(pile.suit) + "  card " + card.name + \
                               " " + str(card.suit) + " " + str(card.rank)
 
-                        return False  # board has problems
+                        boardpassed = False # board has piles problem
                         #raise mismatchinpile
 
         # check stacks
-        """
         for stack in self.stacks: # check each stack for normality
-            for card in stack.cards: # check each card in pile
+            for icard, card in enumerate(stack.cards): # check cards in stack 
+
+                # check for internally consistent card position
+                if card.position != icard: # card has wrong position?
+                    print "stack " + stack.name + " " + card.name + " " + \
+                            "expected position " + str(icard) + " " + \
+                            "but card position is " + str(card.position)
+
+                    boardpassed = False # board has stack position problem
+
+                # check right suit in right pile
                 if card.rank == 0:
                     continue        # skip empty cards
                 else:
-                    if card.suit != pile.suit: # mismatch pile
-                        print "pile " + " " + pile.name + "  card " + \
-                               card.name + " " + str(card.suit) + " " \
-                               + str(card.rank)
-                        raise mismatchinpile """
+                    pass # do some check here for stack integrity
 
-        return True  # if here the board passed checks
+        # check deck
+        for icard, card in enumerate(self.deck.cards): # count cards in deck
+
+            # check for internally consistent card position
+            if card.position != icard: # card has wrong position?
+                print "deck " + card.name + " " + \
+                        "expected position " + str(icard) + " " + \
+                        "but card position is " + str(card.position)
+
+        return boardpassed  # f = board has problems
 
     def display_board(self, game):
         """ visual display of structures on the board """
 
         # display discard piles
-        print('{0}'.format(game.board.p1))  # use __str__ for no prefix strings
-        print('{0}'.format(game.board.p2))
-        print('{0}'.format(game.board.p3))
-        print('{0}'.format(game.board.p4))
+        print '{0}'.format(game.board.p1)   # use __str__ for no prefix strings
+        print '{0}'.format(game.board.p2) 
+        print '{0}'.format(game.board.p3) 
+        print '{0}'.format(game.board.p4) 
 
         # display deck
         print(':' + game.board.deck.display_deck() + ':')
 
         # display stacks
         for i in range(0, game.board.max_stack_size(), 1):
-            print("{0} {1} {2} {3} {4} {5} {6}".format( \
-                           game.board.s1.display_card(i), \
-                           game.board.s2.display_card(i), \
-                           game.board.s3.display_card(i), \
-                           game.board.s4.display_card(i), \
-                           game.board.s5.display_card(i), \
-                           game.board.s6.display_card(i), \
+            print("{0} {1} {2} {3} {4} {5} {6}".format(
+                           game.board.s1.display_card(i),
+                           game.board.s2.display_card(i),
+                           game.board.s3.display_card(i),
+                           game.board.s4.display_card(i),
+                           game.board.s5.display_card(i),
+                           game.board.s6.display_card(i),
                            game.board.s7.display_card(i)))
         #print("end board")
 
@@ -1260,10 +1360,6 @@ class SBoard(Board):
         for card in self.deck.cards:  # loop for each card
             if card.visible: # listing only visibles
                 visiblecardlist.append(card)
-                #print "deck card visible is:"
-                #print  card
-                #print  card.hand.name
-                #print  str(card.position)
 
         return visiblecardlist
 
@@ -1286,7 +1382,6 @@ class SBoard(Board):
             if (len(pile) > 0) and \
                pile.cards[-1].visible:# listing visibles at end of stack
                 destinationcardlist.append(pile.cards[-1])
-                #print "pppppp " + pile.cards[-1].name
 
         return destinationcardlist
 
@@ -1308,7 +1403,8 @@ class SBoard(Board):
                 #print "   " + dest.name
 
                 movevalue, ismovable = \
-                        Card.is_card_movable(source, dest)
+                        source.is_card_movable(sourcecard=source,
+                                destinationcard=dest)
 
                 if ismovable:
 
@@ -1398,7 +1494,7 @@ class Move(object):
 
                  gamemove=0,             # which game move number
                                          # this move is
-                 gamestate=None):        # save of game as the result of this move
+                 gamestate=None):        # save of game as result of this move
 
         # this are attributes of a move
         #   this move's source card
@@ -1457,6 +1553,7 @@ class Move(object):
         #print "dir"
         #print self.__dict__
 
+        # create move string for this move to return to caller
         try:
             movestring = \
                     self.name + ":" + \
@@ -1481,8 +1578,8 @@ class Move(object):
                     str(self.moveid) + ":" + \
                     str(self.gamemove)
 
-        except Exception, Argument:
-            print "Bad move string because " + str(Argument)
+        except Exception, argument:
+            print "Bad move string because " + str(argument)
 
         return movestring
 
@@ -1491,7 +1588,7 @@ class CardGame(object):
         of playing cards """
 
     def __init__(self,              # this game
-                 board=Board(),     # type of board
+                 board=SBoard(),    # type of board
                  deck=Deck(),       # type of deck
                  gamemoves=[],      # list of moves made during this game
                  movescount=0,      # how many moves this game
@@ -1561,31 +1658,56 @@ class CardGame(object):
             # deal into the seven stacks(tried to put this into the board())
             #  use custom stack list each time because game deals
             #  one less stack each deal pass
-            dpass = [self.board.s1, self.board.s2, self.board.s3, self.board.s4, self.board.s5, self.board.s6, self.board.s7]
+            dpass = [self.board.s1, self.board.s2, self.board.s3,
+                    self.board.s4, self.board.s5, self.board.s6, self.board.s7]
             for stack in dpass:
 
                 # clear any residual empty cards from saved game stack
-                stack.cards = []  # clear any residual empty cards from saved game stack
+                stack.cards = []  # clear any residual empty cards from saved
+                                  # game stack
+
+                # add an empty card to each stack
+                stack.cards.insert(0,
+                        Card(suit=4, # 4 == empty suit (no suit yet)
+                             rank=0, # 0 == no rank yet
+                             visible=False, # can't see me now
+                             hand=stack, # this card Hand
+                             position=0)) # position at bottom of stack
+
             # deal into the stacks per the rules of the game
-            self.deck.deal(dpass, 7-0)  # deal first row of stack card
+            self.deck.deal(dpass, 7-0)  # deal first row of stack card,
+                                        # all stacks
 
-            dpass = [         self.board.s2, self.board.s3, self.board.s4, self.board.s5, self.board.s6, self.board.s7]
-            self.deck.deal(dpass, 7-1) # deal next row of stack card
+            dpass = [         self.board.s2, self.board.s3, self.board.s4,
+                    self.board.s5, self.board.s6, self.board.s7]
 
-            dpass = [                        self.board.s3, self.board.s4, self.board.s5, self.board.s6, self.board.s7]
-            self.deck.deal(dpass, 7-2)  # deal next row of stack card
+            self.deck.deal(dpass, 7-1) # deal next row of stack card,
+                                       # but not 1st stack
 
-            dpass = [                                       self.board.s4, self.board.s5, self.board.s6, self.board.s7]
+            dpass = [                        self.board.s3, self.board.s4,
+                    self.board.s5, self.board.s6, self.board.s7]
+
+            self.deck.deal(dpass, 7-2)  # deal next row of stack card,
+                                        # but not 1st and 2nd stack
+
+            dpass = [                                       self.board.s4,
+                    self.board.s5, self.board.s6, self.board.s7]
+
             self.deck.deal(dpass, 7-3)  # deal next row of stack card
 
-            dpass = [                                                      self.board.s5, self.board.s6, self.board.s7]
+            dpass = [
+                    self.board.s5, self.board.s6, self.board.s7]
             self.deck.deal(dpass, 7-4)  # deal next row of stack card
 
-            dpass = [                                                                      self.board.s6, self.board.s7]
+            dpass = [
+                    self.board.s6, self.board.s7]
             self.deck.deal(dpass, 7-5)  # deal next row of stack card
 
-            dpass = [                                                                                     self.board.s7]
-            self.deck.deal(dpass, 7-6)  # deal next row of stack card
+            dpass = [
+                    self.board.s7]
+
+            self.deck.deal(dpass, 7-6)  # deal next row of stack card,
+                                        # only the last stack
 
             # make last card in stacks visible
             self.board.s1.cards[-1].visible = True
@@ -1595,12 +1717,65 @@ class CardGame(object):
             self.board.s5.cards[-1].visible = True
             self.board.s6.cards[-1].visible = True
             self.board.s7.cards[-1].visible = True
-            self.deck.cards[-1].visible     = True # deck card visible
+            if len(self.deck) > 0:
+                self.deck.cards[-1].visible     = True # deck card visible
+
+
+            # when here:
+            # 1. should have a freshly dealt board
+            #
+
+            # this is an example of how to stack the board
+            # to create a card situation to allow debug
+            #   realize this can/will break board integrity
+            if False: #True:
+
+                # put a king onto the deck
+                self.board.deck.cards[-1] = \
+                            Card(suit=0, # 4 == empty suit (no suit yet)
+                                 rank=13, # 0 == no rank yet
+                                 visible=True, # can see me now
+                                 hand=self.board.deck, # this card Hand
+                                 position=3) # no position yet
+
+                # put a king onto a stack
+                self.board.s2.add(
+                            Card(suit=0, # 4 == empty suit (no suit yet)
+                                 rank=13, # 0 == no rank yet
+                                 visible=True, # can see me now
+                                 hand=self.board.s2, # this card Hand
+                                 position=3)) # no position yet
+
+                # clear a stack to allow king moves
+                self.board.s1.remove(self.board.s1.cards[-1])
+                self.board.s1.cards[-1].visible = True
+
+            return
 
     def do_unmove(self, move, game):
         """Do a single requested undo move of card(s)"""
 
-        print "doing undo of move: " + str(move)
+        # define user exceptions
+        class Error(Exception):
+            """Base class for other exceptions"""
+            pass
+
+        # define user exceptions
+        class Movinganemptystackorpilecard(Error):
+            """Raised when moving an empty card (should not happen)"""
+            pass
+
+        # define user exceptions
+        class Decktostackpileundoshouldneverhappen(Error):
+            """Raised when moving an deck card (should not happen)"""
+            pass
+
+        # define user exceptions
+        class Movinganemptystackcard(Error):
+            """Raised when moving an deck card (should not happen)"""
+            pass
+
+        #print "doing undo of move: " + str(move)
 
         # obtain the real card that is on the game.board using
         # the suit and rank of the source card stored into the
@@ -1615,7 +1790,7 @@ class CardGame(object):
                                       rank=move.undodupcard.rank,
                                       handname=move.undodupcard.hand.name)
 
-        if True:
+        if False: #True:
             print "sourcecard " + ":" + \
                   str(sourcecard) + ":" + \
                   sourcecard.hand.name + ":" + \
@@ -1653,15 +1828,15 @@ class CardGame(object):
                   str(move.undodupcard.position) + ":" + \
                   str(move.undodupcard.visible)
 
-        # undo deck to deck moves differently than the other board moves
+        # undo stack->[stack|pile] moves differently than the other moves
         if (not sourcecard.hand.name == "Deck") and \
            (not destinationcard.hand.name == "Deck"):
 
             # do a stack->[stack|pile] move
-            print "do a stack->[stack|pile] move"
+            #print "do a stack->[stack|pile] move"
 
             if sourcecard.rank == 0:
-                raise movinganemptystackcard
+                raise Movinganemptystackcard
 
             # turn just uncovered source up card to visiblity it was
             # before the normal move
@@ -1697,9 +1872,9 @@ class CardGame(object):
              (destinationcard.hand.name != "Deck"):
 
             # do a deck->[stack|pile] move
-            print "deck to [stack|pile] unmove not implemented yet!"
+            #print "deck to [stack|pile]"
 
-            raise decktostackpileundoshouldneverhappen
+            raise Decktostackpileundoshouldneverhappen
 
         # undo [stack|pile] to deck moves differently than the other
         # board moves
@@ -1707,10 +1882,10 @@ class CardGame(object):
              (destinationcard.hand.name == "Deck"):
 
             # do a [stack|pile] -> deck move
-            print "[stack|pile] to deck unmove not implemented yet!"
+            #print "[stack|pile] to deck"
 
             if sourcecard.rank == 0:
-                raise movinganemptystackorpilecard
+                raise Movinganemptystackorpilecard
 
             # make now top card not visible again as it was before move
             game.deck.cards[-1].visible = False
@@ -1750,7 +1925,7 @@ class CardGame(object):
         else:
 
             # do a deck->deck move
-            print "do a deck->deck move"
+            #print "do a deck->deck move"
 
             # make now top card not visible again as it was before move
             game.deck.cards[-1].visible = False
@@ -1769,7 +1944,14 @@ class CardGame(object):
             if move.movevalue < 0: # this means the death card was added
 
                 # delete the added death card
-                game.deck.remove_death_card() # remove death card if any
+                #game.deck.remove_death_card() # remove death card if any
+                pass
+
+            # reposition the cards in the deck because they shifted
+            for i, card in enumerate(game.deck.cards):
+
+                # all cards now with position in hand
+                card.position = i
 
             # when here:
             # 1. the deck is restored to the pre dd state
@@ -1793,14 +1975,20 @@ class CardGame(object):
         umove.gamemove = game.movescount
 
         # save this new game to the gamemoves (do this before saving this move!)
-        umove.gamestate = copy.deepcopy(game) # copy of state of game right now
-        umove.gamestate.gamemoves = []        # null out saved game moves else
-                                              # many games get saved
+        #umove.gamestate = copy.deepcopy(game) # copy of state of game right now
+        #umove.gamestate.gamemoves = []        # null out saved game moves else
+                                               # many games get saved
+        # save only the part of the game that is needed for unmove compare
+        umove.gamestate = CardGame(board=SBoard(), deck=Deck(),
+                gamemoves=[]) # get a new game
+        umove.gamestate.board = copy.deepcopy(game.board) # store current game
+        umove.gamestate.deck = [] # don't need this either
+        umove.gamestate.movescount = game.movescount
 
         # append umove to game moves
         game.gamemoves.append(umove) # list of moves played
 
-        print "did umove: " + str(game.movescount) + " " + str(umove)
+        #print "did umove: " + str(game.movescount) + " " + str(umove)
 
         # When here:
         # 1. the game and board updated back to before the orignal move
@@ -1813,7 +2001,7 @@ class CardGame(object):
         """Do a single requested source to destination move of card(s)"""
 
         """Note: there are only three(3) places that move a card:
-                 1. do_move()  
+                 1. do_move()
                  2. do_unmove()
                  3. rotate
         """
@@ -1880,7 +2068,7 @@ class CardGame(object):
             if move.sourcecard.hand.name != "Deck":
 
                 # add an empty card and make visible
-                move.sourcecard.hand.add( \
+                move.sourcecard.hand.add(
                         Card(suit=4, # 4 == empty suit (no suit yet)
                              rank=0, # 0 == no rank yet
                              visible=True, # can see me now
@@ -1898,7 +2086,7 @@ class CardGame(object):
                 # add an empty death card to deck
                 # delme move.sourcecard.hand.cards.append(Card(4, 0, False))
                 # add an empty death card and make invisible
-                move.sourcecard.hand.cards.append( \
+                move.sourcecard.hand.cards.append(
                         Card(suit=4, # 4 == empty suit (no suit yet)
                              rank=0, # 0 == no rank yet
                              visible=True, # can see me now
@@ -1931,7 +2119,7 @@ class CardGame(object):
         # save the orginal destination up card into the move's
         # undo source position for later use during the undo move
         move.undosupcard = \
-                  copy.deepcopy(move.destinationcard.hand.cards[-2])
+                  copy.deepcopy(move.destinationcard.hand.cards[move.sourcecard.position-1])
 
         # make any empty card destination not visible once it gets
         # covered else it will look avaialble
@@ -1953,7 +2141,7 @@ class CardGame(object):
         # but don't remove death card/empty card if it is the only
         # card in the deck because a zero length hand/deck list
         # is not a good thing for how this program is designed.
-        if (self.deck.cards[0].suit != 4) and (self.deck.cards[0].rank != 0): 
+        if (self.deck.cards[0].suit != 4) and (self.deck.cards[0].rank != 0):
             self.deck.remove_death_card()  # give deck another loop through
                                            # after any move
 
@@ -2019,14 +2207,21 @@ class CardGame(object):
         move.gamemove = game.movescount
 
         # save this new game to the gamemoves (do this before saving this move!)
-        move.gamestate = copy.deepcopy(game) # copy of state of game right now
-        move.gamestate.gamemoves = []        # null out saved game moves else
-                                             # many games get saved
+        #move.gamestate = copy.deepcopy(game) # copy of state of game right now
+        #move.gamestate.gamemoves = []        # null out saved game moves else
+        #                                     # many games get saved
+        # save only the part of the game that is needed for move compare
+        move.gamestate = CardGame(board=SBoard(), deck=Deck(), # get a new game
+                gamemoves=[]) # get a new game
+        move.gamestate.board = copy.deepcopy(game.board) # store current game
+        move.gamestate.deck = [] # don't need this either
+        move.gamestate.moveid = move.moveid # save this move's id
+        move.gamestate.movescount = game.movescount # save this move's count
 
         # save this move into the game's list of moves
         game.gamemoves.append(move) # list of moves played
 
-        print "did move: " + str(game.movescount) + " " + str(move)
+        #print "did move: " + str(game.movescount) + " " + str(move)
 
         # When here:
         # 1. the game and board updated with the orignal move
@@ -2102,25 +2297,25 @@ class CardGame(object):
                 # clubs (black suit)
                 clublow1card, \
                 clublow2card, \
-                clublowlow = game.board.check_suit_lowlow_condition( \
+                clublowlow = game.board.check_suit_lowlow_condition(
                                                          game=game, suit=0)
 
                 # diamonds (red suit)
                 diamondlow1card, \
                 diamondlow2card, \
-                diamondlowlow = game.board.check_suit_lowlow_condition( \
+                diamondlowlow = game.board.check_suit_lowlow_condition(
                                                          game=game, suit=1)
 
                 # hearts (red suit)
                 heartlow1card, \
                 heartlow2card, \
-                heartlowlow = game.board.check_suit_lowlow_condition( \
+                heartlowlow = game.board.check_suit_lowlow_condition(
                                                          game=game, suit=2)
 
                 # spades (black suit)
                 spadelow1card, \
                 spadelow2card, \
-                spadelowlow = game.board.check_suit_lowlow_condition( \
+                spadelowlow = game.board.check_suit_lowlow_condition(
                                                          game=game, suit=3)
 
                 # print in color order
@@ -2171,7 +2366,7 @@ class CardGame(object):
             def do_ld(self, arg):
                 """List destination cards on the board (program debug)"""
                 'lv: LIST DESTINATION CARDS'
-                print(','.join(card.name \
+                print(','.join(card.name
                         for card in game.board.list_destination_cards()))
                 return False  # continue command loop
 
@@ -2179,7 +2374,7 @@ class CardGame(object):
             def do_lv(self, arg):
                 """List visible cards on the board (program debug)"""
                 'lv: LIST VISIBLE CARDS'
-                print(','.join(card.name \
+                print(','.join(card.name
                         for card in game.board.list_visible_cards()))
                 return False  # continue command loop
 
@@ -2187,7 +2382,7 @@ class CardGame(object):
             def do_ls(self, arg):
                 """List source cards (program debug)"""
                 'ls: LIST SOURCE CARDS'
-                print(','.join(card.name \
+                print(','.join(card.name
                         for card in game.board.list_source_cards()))
                 return False  # continue command loop
 
@@ -2239,7 +2434,7 @@ class CardGame(object):
 
                 print "We played " + str(game.movescount) + " moves."
                 for i, move in enumerate(game.gamemoves):
-                    print (i+1), "  ", move
+                    print (i), "  ", move
                 return False  # continue command loop
 
             @classmethod
@@ -2287,7 +2482,6 @@ class CardGame(object):
             def do_u(self, arg):
                 """Undo moves"""
                 'u: UNDO MOVES'
-                print "not implemented yet!"
 
                 # travel game moves until an undoable move found
                 candidatemove = None
@@ -2295,34 +2489,50 @@ class CardGame(object):
 
                     # check an undoable move
                     if (not candidatemove.wasundone) and \
-                       (not candidatemove.isundo):
+                       (not candidatemove.isundo) and \
+                       (candidatemove.moveid != 0): # move 0 is not playable
                         # we found the next move to undo
                         break
                     else:
                         # this candidatemove is not undoable because
                         # it is was either already undone or
-                        # is an undo move itself
+                        # is an undo move itself or
+                        # it is the 0th move which is not a real
+                        #   move- it just contains the original game
                         candidatemove = None # mark this move ineligable
 
                 # go do the undo move if found one
+                # else display no undo available message and return
                 if candidatemove is not None:
 
-                    print "candidatemove = " + str(candidatemove)
+                    #print "candidatemove = " + str(candidatemove)
 
                     # find game of previous move because this is the
                     # game to compare after undoing candidate move
                     #  think about it!
 
                     # travel up from candidatemove to find previous move
-                    premove = candidatemove
-                    for ipremove in range((candidatemove.gamemove-1), 
-                            0, -1):
+                    premove = game.gamemoves[0] # defaulf to original game
+                    for ipremove in range((candidatemove.gamemove-1),
+                            -1, -1):
 
-                        print str(game.gamemoves[ipremove-1])
+                        if False: # True:
+                            print "undbg" + str(ipremove) + " " + \
+                                    str(game.gamemoves[ipremove])
+
+                            if game.gamemoves[ipremove].wasundone:
+                                print "was undone"
+
+                            if game.gamemoves[ipremove].isundo:
+                                print "is undo"
+
+                            if game.gamemoves[ipremove].moveid == 0:
+                                print "is original game"
 
                         # skip over undoable moves
-                        if (game.gamemoves[ipremove-1].wasundone) or \
-                           (game.gamemoves[ipremove-1].isundo):
+                        if (game.gamemoves[ipremove].wasundone) or \
+                           (game.gamemoves[ipremove].isundo) or \
+                           (game.gamemoves[ipremove].moveid == 0):
 
                             # this premove is undoable anyway
                             continue # keep looking for a doable premove
@@ -2331,23 +2541,26 @@ class CardGame(object):
 
                             # we found the previous move
                             #  this is the next one up from the candidatemove
-                            premove = game.gamemoves[ipremove-1]
+                            premove = game.gamemoves[ipremove]
                             break # leave ipremove loop because we found it
 
-                    print "vvvvvvvvvvvvvvvvv board before undo"
+                    if False: # True:
+                        print "vvvvvvvvvvvvvvvvv board before undo"
 
-                    print "pre move = " + str(premove)
-                    print "un  move = " + str(candidatemove)
+                        print "pre move = " + str(premove)
+                        print "un  move = " + str(candidatemove)
 
-                    self.do_db(arg="")
-                    game.board.check_board_integrity(game) #pass in game
+                        self.do_db(arg="")
+                        game.board.check_board_integrity(game) #pass in game
+                        print "^^^^^^^^^^^^^^^^^ board before undo"
 
+                    # perform the unmove
                     game.do_unmove(move=candidatemove, # peform move
                                    game=game)          # need game board
 
                     # check for integrity after an undo
-                    print "board after undo"
-                    self.do_db(arg="")
+                    #print "vvvvvvvvvvvvvvvvvvvvv board after undo"
+                    #self.do_db(arg="")
                     if not game.board.check_board_integrity(game):
                         return True # True means board failed integrity check
 
@@ -2356,6 +2569,7 @@ class CardGame(object):
                     if not game.board.compare_games(game, # this game right now
                             premove): # original game
                         return True # True means board failed compare check
+                    #print "^^^^^^^^^^^^^^^^^^^^^ board after undo"
 
                 else:
                     print "No undo moves available"
@@ -2388,9 +2602,15 @@ class CardGame(object):
                 # display moves
                 if len(moves) > 0: # we have some moves to display
 
+                    movedisplayed = False # display help message or not
+
                     for move in moves:
                         if move.movevalue < 1000:
                             print move
+                            movedisplayed = True # no help needed
+
+                    if not movedisplayed: 
+                        print "No useful moves. Try dd or mm."
 
                 else: # no moves show hint
 
@@ -2469,7 +2689,7 @@ class CardGame(object):
                         elif arg[0] == 'i':
                             movenumber = 9
                         else:
-                            movenumber = int(arg[0:])  # convert a real n argument
+                            movenumber = int(arg[0:]) # convert real n argument
                     except Exception:
                         print "need a move numnber  try m then p n"
                         return False  # keep command looping
@@ -2545,13 +2765,6 @@ class CardGame(object):
                             if move.movevalue < (prio + 1):
 
                                 game.do_move(move, game)  # perform move
-
-                    # check this new game (just unmoved) against the game
-                    # saved after the orginal move
-                                if not game.board.compare_games(game, # this game right now
-                            move): # original game
-                                    return True # True means board failed compare check
-
 
                                 didmove = True # indicate a move made this
                                                # prio
@@ -2821,9 +3034,16 @@ class Gameshell(cmd.Cmd):
         """Play new manual game"""
         self.game = CardGame(
             board=SBoard(), # create game with specific board
-            deck=Deck()
+            deck=Deck(),
+            gamemoves=[]
             # use defaults for all other game attributes
             )   # create game with a deck
+
+        # save game creation 'move' to the list of game moves
+        self.game.gamemoves.append(
+                Move(sourcecard=Card(hand=Hand(name="OriginalGame")),
+                    destinationcard=Card(hand=Hand(name="OriginalGame")),
+                    gamestate=copy.deepcopy(self.game)))
 
         self.game.play(self.game, command="")
 
@@ -2852,7 +3072,7 @@ class Gameshell(cmd.Cmd):
             def do_dir(self, arg):
                 """List contents of current directory"""
                 import os
-                print [os.path.join(os.getcwd(), f) \
+                print [os.path.join(os.getcwd(), f)
                         for f in os.listdir(os.getcwd())]
                 return False  # continue loop
 
@@ -3040,7 +3260,7 @@ class Tournamentshell(cmd.Cmd):
             def do_dir(arg):
                 """List contents of current directory"""
                 import os
-                print [os.path.join(os.getcwd(), f) \
+                print [os.path.join(os.getcwd(), f)
                         for f in os.listdir(os.getcwd())]
                 return False  # continue loop
 
@@ -3109,10 +3329,26 @@ class Tournamentshell(cmd.Cmd):
         Openfile().cmdloop()
         return False
 
+    def do_hint(self, arg):
+        """Provide hint on how to play this game"""
+        'hint:   HINT'
+        print "To play a manual game:"
+        print "tournament> mg"
+        print "game> ng"
+        print "play> m"
+        print "play> p"
+        print ""
+        print "To play an automatic game:"
+        print "tournament> mg"
+        print "game> ng"
+        print "play> a"
+
+        return False
+
     def do_exit(self, arg):
         """Exit program"""
         'exit:   EXIT'
-        print ("Thanks for playing!")
+        print "Thanks for playing!"
         self.close()
         return True  # exit command loop
 
@@ -3124,6 +3360,20 @@ class Tournamentshell(cmd.Cmd):
         """ do this after command loop exits """
         #print "exiting tournament command loop"
         pass
+
+    def do_about(self, arg):
+        """Provide version information"""
+        'about:   ABOUT'
+        global VERSION_STRING
+        print "Version: " + VERSION_STRING
+
+        return False
+
+    def do_exit(self, arg):
+        """Exit program"""
+        'exit:   EXIT'
+
+        return True
 
 if __name__ == '__main__':
     import doctest

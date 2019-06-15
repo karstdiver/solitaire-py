@@ -3021,7 +3021,9 @@ class Gameshell(cmd.Cmd):
     def do_status(self, arg):
         """Display status of the game"""
 
-        if self.game.winnable:
+        if self.game.winnable:  # FIXME: Add exception hecause self.game does
+                                #    not exist when mg then status command
+                                #    sequence is played
             won = "Game Won!"
         else:
             won = "Game not won yet..."

@@ -3001,12 +3001,15 @@ class Gameshell(cmd.Cmd):
     def do_status(self, arg):
         """Display status of the game"""
 
-        if self.game.winnable:  # FIXME: Add exception hecause self.game does
-            #    not exist when mg then status command
-            #    sequence is played
-            won = 'Game Won!'
-        else:
-            won = "Game not won yet..."
+        won = 'No game yet. Try ng...'  # type: str
+
+        try:
+            if self.game.winnable:
+                won = 'Game Won!'
+            else:
+                won = 'Game not won yet...'  # type: str
+        except:
+            pass
 
         print won
 
@@ -3031,6 +3034,12 @@ class Gameshell(cmd.Cmd):
 
         return False  # continue command loop
 
+    def do_rg(self, arg):
+        """Resume current game"""
+        # TODO: figure out how to resume game once at this menu level
+        print "rs not implemented yet. Try saving game then playing saved game."
+        return False  # continue command loop
+
     def do_psg(self, arg):
         """Play saved game"""
         'PSG: PLAY SAVED GAME'
@@ -3051,7 +3060,8 @@ class Gameshell(cmd.Cmd):
                 self.close()
                 return True  # exit command loop
 
-            def do_dir(self, arg):
+            @staticmethod
+            def do_dir(arg):
                 """List contents of current directory"""
                 import os
                 print [os.path.join(os.getcwd(), f)

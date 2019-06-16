@@ -1199,7 +1199,7 @@ class SBoard(Board):
                     # print "1looking at card " + card.name
 
                     # look for either suit,rank or suit,rank,hand
-                    if handname == None:  # match only suit and rank
+                    if handname is None:  # match only suit and rank
 
                         # look only for suit,rank with hand don't care
                         if card.suit == suit and \
@@ -1240,7 +1240,7 @@ class SBoard(Board):
                     # print "2looking at card " + card.name
 
                     # look for either suit,rank or suit,rank,hand
-                    if handname == None:  # match only suit and rank
+                    if handname is None:  # match only suit and rank
 
                         # look only for suit,rank with hand don't care
                         if card.suit == suit and \
@@ -1280,7 +1280,7 @@ class SBoard(Board):
                 # print "3looking at card " + card.name
 
                 # look for either suit,rank or suit,rank,hand
-                if handname == None:  # match only suit and rank
+                if handname is None:  # match only suit and rank
 
                     # look only for suit,rank with hand don't care
                     if card.suit == suit and \
@@ -3003,7 +3003,7 @@ class Gameshell(cmd.Cmd):
         if self.game.winnable:  # FIXME: Add exception hecause self.game does
             #    not exist when mg then status command
             #    sequence is played
-            won = "Game Won!"
+            won = 'Game Won!'
         else:
             won = "Game not won yet..."
 

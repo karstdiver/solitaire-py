@@ -91,7 +91,8 @@ class Card(object):
         self.hand = hand  # which hand is this card in
         self.position = position  # which position in the hand this card is in
 
-    def is_card_movable(self, sourcecard, destinationcard):
+    @staticmethod
+    def is_card_movable(sourcecard, destinationcard):
         """" determine if source card can be moved to desitnation card
              return a value of the move and if can be moved """
 
@@ -167,7 +168,7 @@ class Card(object):
             #  Therefore we don't want to reject this move completely but
             #  set its prio so low that it is made only as last resort
             #  which is what walking up the ladder it.
-            if ((((((thiscard.suit == 0) or (thiscard.suit == 3)) and \
+            if ((((((thiscard.suit == 0) or (thiscard.suit == 3)) and
                    ((upcard.suit == 1) or (upcard.suit == 2))) or \
                   (((thiscard.suit == 1) or (thiscard.suit == 2)) and \
                    ((upcard.suit == 0) or (upcard.suit == 3)))) and \
@@ -619,6 +620,7 @@ class Hand(Deck):
     """ foundational hand of play cards class """
 
     def __init__(self, name="", suit=-1):
+        super(Hand, self).__init__()
         self.cards = []  # hands contain a list of card
         self.name = name  # each hand has a name
         self.suit = suit  # each hand has an optional suit
@@ -2919,13 +2921,12 @@ class CardGame(object):
                 """Save Current Game"""
                 'SG: SAVE GAME'
 
+                # get saved game file name from user
+                filename = raw_input("file name> ")  # type: str
+
                 # try to open the file
                 try:
-
-                    # get saved game file name from user
-                    filename = raw_input("file name> ")
-
-                    filehandler = open(filename, 'w')
+                   filehandler = open(filename, 'w')
                 except IOError:
                     print \
                         "Unable to open the file " + filename + ", try again"

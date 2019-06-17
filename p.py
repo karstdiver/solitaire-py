@@ -2221,6 +2221,7 @@ class CardGame(object):
 
     @classmethod
     def play(self, game, command=""):
+        # type: (object, object) -> object
         """ this is the primary way to start playing a game. """
 
         # print("playing")
@@ -3036,8 +3037,15 @@ class Gameshell(cmd.Cmd):
 
     def do_rg(self, arg):
         """Resume current game"""
-        # TODO: figure out how to resume game once at this menu level
-        print "rs not implemented yet. Try saving game then playing saved game."
+
+        try:
+            s = 'Resuming game play...'  # type: str
+            print s  # print now because ...play() is a command loop
+            self.game.play(self.game, command="")
+        except:
+            s = 'No game yet. Try ng...'  # type: str
+            print s
+
         return False  # continue command loop
 
     def do_psg(self, arg):

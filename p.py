@@ -41,6 +41,7 @@ EOF
 from color import colors  # for ansi color codes
 
 from treelib import *
+from anytree import *
 
 # from copy import deepcopy # to copy objects
 # from copy import *
@@ -57,8 +58,13 @@ import cmd
 import sys
 
 # global variables
-VERSION_STRING = "1.0"  # for about command
+VERSION_STRING = "2.0"  # for about command
+                        # version 1.n is single game p.py
+                        #   with working ag, ng, sg and psg
+                        # version 2.n is single game expanded
+                        #   into its game tree grown with possible moves
 TOURNAMENT_COMMAND_QUEUE = ""  # auto-commanding when needed
+TREEGAME_COMMAND_QUEUE = ""  # auto-commanding when needed
 GAME_COMMAND_QUEUE = ""  # auto-commanding when needed
 PLAY_COMMAND_QUEUE = ""  # auto-commanding when needed
 GAMES_WON_COUNT = 0  # count how many games won this tournament
@@ -526,7 +532,8 @@ class Deck(object):
         #                                     # moves else many games get saved
         # save only the part of the game that is needed for move compare
         # get a new game
-        game.gamemoves[-1].gamestate = CardGame(board=SBoard(), deck=Deck())
+        game.gamemoves[-1].gamestate = CardGame(name=game.name,
+                                                board=SBoard(), deck=Deck())
         # store current game
         game.gamemoves[-1].gamestate.board = copy.deepcopy(game.board)
         game.gamemoves[-1].gamestate.deck = []  # don't need this either
@@ -1577,17 +1584,30 @@ class Move(object):
 
         return movestring
 
-
-class CardGame(object):
+# from anytree import NodeMixin, RenderTree
+class CardGameBaseClass(object):
+    foo = 4
+    #vclass MyClass(MyBaseClass, NodeMixin):  # Add Node feature
+    #...     def __init__(self, name, length, width, parent=None, children=None):
+    #...         super(MyClass, self).__init__()
+class CardGame(CardGameBaseClass, NodeMixin):
     """ foundational class of a game containing a board and a deck
         of playing cards """
 
     def __init__(self,  # this game
+                 name,  # tree node name
                  board=SBoard(),  # type of board
                  deck=Deck(),  # type of deck
                  gamemoves=[],  # list of moves made during this game
                  movescount=0,  # how many moves this game
-                 savedgame=False):  # True if this game is savedgame
+                 savedgame=False,  # True if this game is savedgame
+                 parent=None,  # tree attribute
+                 children=None):  # tree attribute
+
+        super(CardGame, self).__init__()
+
+        # here are tree attributes of a game
+        self.name = name,
 
         # here are the attibutes of a game
         self.board = board  # the game has a board
@@ -1969,7 +1989,8 @@ class CardGame(object):
         # umove.gamestate.gamemoves = []        # null out saved game moves else
         # many games get saved
         # save only the part of the game that is needed for unmove compare
-        umove.gamestate = CardGame(board=SBoard(), deck=Deck(),
+        umove.gamestate = CardGame(name=game.name,
+                                   board=SBoard(), deck=Deck(),
                                    gamemoves=[])  # get a new game
         umove.gamestate.board = copy.deepcopy(game.board)  # store current game
         umove.gamestate.deck = []  # don't need this either
@@ -2199,7 +2220,8 @@ class CardGame(object):
         # move.gamestate.gamemoves = []        # null out saved game moves else
         #                                     # many games get saved
         # save only the part of the game that is needed for move compare
-        move.gamestate = CardGame(board=SBoard(), deck=Deck(),  # get a new game
+        move.gamestate = CardGame(name=game.name,
+                                  board=SBoard(), deck=Deck(),  # get a new game
                                   gamemoves=[])  # get a new game
         move.gamestate.board = copy.deepcopy(game.board)  # store current game
         move.gamestate.deck = []  # don't need this either
@@ -2212,16 +2234,15 @@ class CardGame(object):
         # print "did move: " + str(game.movescount) + " " + str(move)
 
         # When here:
-        # 1. the game and board updated with the orignal move
-        # 2. the move object has been restored to orignal move
+        # 1. the game and board updated with the original move
+        # 2. the move object has been restored to original move
         # 3. the move object contains enough info to accomplish an
         #    undo move
 
         return True  # from do_move
 
     @classmethod
-    def play(self, game, command=""):
-        # type: (object, object) -> object
+    def play(self, tree, game, command=""):
         """ this is the primary way to start playing a game. """
 
         # print("playing")
@@ -2931,29 +2952,32 @@ class CardGame(object):
                 except IOError:
                     print \
                         "Unable to open the file " + filename + ", try again"
+                    print("Unexpected error:", sys.exc_info()[0])
                     return False  # keep command looping
+
+                # save this game
+                game.winningmoves = game.gamemoves
+                game.savedgame = True
+
+                # check for won game for proper .winnable setting
+                if game.board.check_board_won(game):  # pass in game
+                    # needs to be true if won for reload playing
+                    game.winnable = True
+                else:
+                    game.winnable = False
 
                 # try to save the game
                 try:
 
-                    # save this game
-                    game.winningmoves = game.gamemoves
-                    game.savedgame = True
-
-                    # check for won game for proper .winnable setting
-                    if game.board.check_board_won(game):  # pass in game
-                        # needs to be true if won for reload playing
-                        game.winnable = True
-                    else:
-                        game.winnable = False
-
                     # serialize game to file
+                    # FIXME: this failes when game is anytree NodeMixIn type  does not fail when just object type
                     pickle.dump(game, filehandler)
 
                     filehandler.close()
 
                 except Exception:
-                    print "Unable to save game, try again"
+                    print "Unable to save game (pickle failed), try again"
+                    print("Unexpected error:", sys.exc_info()[0])
                     return False  # keep command looping
 
                 else:
@@ -2974,6 +2998,194 @@ class CardGame(object):
 
         return True  # return from playing this game
 
+# this is the tournament -> Tree GAME -> play command loop
+class TreeGameshell(cmd.Cmd):
+    """Game selector command processor."""
+    intro = \
+        'Welcome to the Tree Game shell. Type help or ? to list commands.\n'
+
+    prompt = 'tree game> '
+
+    def preloop(self):
+        """Do this when cmdloop() starts."""
+
+        # handle any auto-commands for this cmdloop run
+
+        #  handle any auto-commands set by the tournament (ag)
+        global TREEGAME_COMMAND_QUEUE  # auto-commanding when needed
+        self.cmdqueue = TREEGAME_COMMAND_QUEUE  # do any auto-comments
+
+        return False  # continue command loop
+
+    def do_pass(self, arg):
+        """Do nothing command"""
+        print "Doing nothing!"
+        return False  # continue command loop
+
+    def do_status(self, arg):
+        """Display status of the game"""
+
+        # self.game should be a tree here
+        # TODO:  change this to status the current game tree
+        won = 'No game yet. Try tg...'  # type: str
+
+        try:
+            if self.game.winnable:
+                won = 'Game Won!'
+            else:
+                won = 'Game not won yet...'  # type: str
+        except:
+            pass
+
+        print won
+
+        return False  # continue command loop
+
+    def do_nt(self, arg):
+        """Play new tree game"""
+        self.tree = CardGame(
+            name='root',  # game tree root  1st node
+            board=SBoard(),  # create game with specific board
+            deck=Deck(),
+            gamemoves=[]
+            # use defaults for all other game attributes
+        )  # create game with a deck
+
+        self.game = self.tree
+
+        # save game creation 'move' to the list of game moves
+        self.game.gamemoves.append(
+            Move(sourcecard=Card(hand=Hand(name="OriginalGame")),
+                 destinationcard=Card(hand=Hand(name="OriginalGame")),
+                 gamestate=copy.deepcopy(self.game)))
+
+        self.game.play(self.tree, self.game, command="")
+
+        return False  # continue command loop
+
+    def do_rg(self, arg):
+        """Resume current game"""
+
+        try:
+            s = 'Resuming tree game play...'  # type: str
+            print s  # print now because ...play() is a command loop
+            self.game.play(self.game, command="")
+        except:
+            s = 'No tree game yet. Try nt...'  # type: str
+            print s
+
+        return False  # continue command loop
+
+    def do_psg(self, arg):
+        """Play saved game"""
+        'PSG: PLAY SAVED GAME'
+
+        class Openfile(cmd.Cmd):
+            """Open saved game"""
+            intro = \
+                'Open and play a saved game. Type help or ? to list commands.\n'
+            prompt = 'file> '
+
+            def close(self):
+                """ close """
+                pass
+
+            def do_exit(self, arg):
+                """Exit saved game command loop"""
+                'exit:   EXIT'
+                self.close()
+                return True  # exit command loop
+
+            @staticmethod
+            def do_dir(arg):
+                """List contents of current directory"""
+                import os
+                print [os.path.join(os.getcwd(), f)
+                       for f in os.listdir(os.getcwd())]
+                return False  # continue loop
+
+            # get saved game file name from user
+            def do_open(self, arg):
+                """Enter saved game filename"""
+
+                # get saved game file name from user
+                filename = raw_input("file name> ")
+
+                # try to open the file
+                try:
+                    filehandler = open(filename, 'r')
+                except IOError:
+                    print "The file does not exist, try again"
+                    return False  # keep command looping
+
+                # try to read the saved game
+                try:
+                    self.savedgame = pickle.load(filehandler)
+                except Exception:
+                    print "Error reading the saved game, try again"
+                    return False  # keep command looping
+                else:
+                    print "Loaded game from " + filename
+                    print "now try play"
+
+                filehandler.close()
+
+            # play saved game
+            def do_play(self, arg):
+                """Play saved game"""
+                'play: PLAY SAVED GAME'
+
+                # which deck to use for saved game?
+                try:
+                    if self.savedgame.winnable:
+                        # use orignal shuffled deck
+                        thisdeck = self.savedgame.originaldeck
+                    else:
+                        # use the saved deck (in process deck)
+                        thisdeck = self.savedgame.deck
+
+                except Exception:
+                    print "No saved game loaded. Try open first"
+                    print("Unexpected error:", sys.exc_info()[0])
+                    return False  # continue command loop
+
+                # load the saved game
+                try:
+                    self.game = \
+                        CardGame(name=game.name,
+                                 board=self.savedgame.board,
+                                 deck=thisdeck,
+                                 gamemoves=self.savedgame.gamemoves,
+                                 movescount=self.savedgame.movescount,
+                                 savedgame=self.savedgame.savedgame)
+                except Exception:
+                    print "No game loaded. Try open first"
+                    print("Unexpected error:", sys.exc_info()[0])
+                    return False  # continue command loop
+
+                # print "game.savedgame", str(self.game.savedgame)
+                self.game.play(self.game, command="")
+
+                return True  # exit saved game command loop
+
+        # do saved game command loop
+        Openfile().cmdloop()
+        return False
+
+    def do_exit(self, arg):
+        """Exit game"""
+        'exit:   EXIT'
+        # print ("Thanks for playing!")
+        self.close()
+        return True  # exit command loop
+
+    def close(self):
+        """ close """
+        pass
+
+    def postloop(self):
+        # print "exiting tree command loop"
+        pass
 
 # this is the tournament -> GAME -> play command loop
 class Gameshell(cmd.Cmd):
@@ -3018,12 +3230,15 @@ class Gameshell(cmd.Cmd):
 
     def do_ng(self, arg):
         """Play new manual game"""
-        self.game = CardGame(
+        self.tree = CardGame(
+            name='root',  # game tree root  1st node
             board=SBoard(),  # create game with specific board
             deck=Deck(),
             gamemoves=[]
             # use defaults for all other game attributes
         )  # create game with a deck
+
+        self.game = self.tree
 
         # save game creation 'move' to the list of game moves
         self.game.gamemoves.append(
@@ -3031,7 +3246,7 @@ class Gameshell(cmd.Cmd):
                  destinationcard=Card(hand=Hand(name="OriginalGame")),
                  gamestate=copy.deepcopy(self.game)))
 
-        self.game.play(self.game, command="")
+        self.game.play(self.tree, self.game, command="")
 
         return False  # continue command loop
 
@@ -3108,18 +3323,24 @@ class Gameshell(cmd.Cmd):
                 'play: PLAY SAVED GAME'
 
                 # which deck to use for saved game?
-                if self.savedgame.winnable:
-                    # use orignal shuffled deck
-                    thisdeck = self.savedgame.originaldeck
+                try:
+                    if self.savedgame.winnable:
+                        # use orignal shuffled deck
+                        thisdeck = self.savedgame.originaldeck
+                    else:
+                        # use the saved deck (in process deck)
+                        thisdeck = self.savedgame.deck
 
-                else:
-                    # use the saved deck (in process deck)
-                    thisdeck = self.savedgame.deck
+                except Exception:
+                    print "No saved game loaded. Try open first"
+                    print("Unexpected error:", sys.exc_info()[0])
+                    return False  # continue command loop
 
                 # load the saved game
                 try:
                     self.game = \
-                        CardGame(board=self.savedgame.board,
+                        CardGame(name=game.name,
+                                 board=self.savedgame.board,
                                  deck=thisdeck,
                                  gamemoves=self.savedgame.gamemoves,
                                  movescount=self.savedgame.movescount,
@@ -3174,6 +3395,23 @@ class Tournamentshell(cmd.Cmd):
     def do_pass(arg):
         """Do nothing command"""
         print "Doing nothing!"
+        return False  # continue command loop
+
+    @staticmethod
+    def do_tg(arg):
+        """Play a game with its game tree"""
+        'tg: PLAY A GAME WITH A GAME TREE'
+
+        # set the command the game cmdloop() needs to do for tree game
+        global GAME_COMMAND_QUEUE
+        GAME_COMMAND_QUEUE = []  # no auto-commands needed for tree game
+
+        global TREEGAME_COMMAND_QUEUE
+        TREEGAME_COMMAND_QUEUE = []  # no auto-commands needed for tree game
+
+        # play the game tree with auto-commands set (if any)
+        TreeGameshell().cmdloop()  # enter game command loop
+
         return False  # continue command loop
 
     @staticmethod
@@ -3307,7 +3545,8 @@ class Tournamentshell(cmd.Cmd):
                 # load the saved game
                 try:
                     self.game = \
-                        CardGame(board=self.savedgame.board,
+                        CardGame(name=game.name,
+                                 board=self.savedgame.board,
                                  deck=thisdeck,
                                  gamemoves=self.savedgame.gamemoves,
                                  movescount=self.savedgame.movescount,

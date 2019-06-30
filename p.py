@@ -1601,6 +1601,9 @@ class CardGame(CardGameBaseClass, NodeMixin):
                  gamemoves=[],  # list of moves made during this game
                  movescount=0,  # how many moves this game
                  savedgame=False,  # True if this game is savedgame
+                 played=False,  # True == this child node game has been 'moved' played
+                                # False == this child node has not been played and should be
+                                #  a left until it is played and resulting board moves become
                  parent=None,  # tree attribute
                  children=None):  # tree attribute
 
@@ -1622,6 +1625,12 @@ class CardGame(CardGameBaseClass, NodeMixin):
         self.originaldeck = deck  # either a fresh deck or a saved deck
         self.savedgame = savedgame  # don't deal if already known game
         self.winnable = self.board.check_board_won(self)  # pass in game
+        self.played = played
+
+        # set this game's tree nodes
+        self.parent = parent  # set this game's tree parent node
+        if children:
+            self.children = children  # set this game's tree children node, if any
 
         # load savedgame deck else do random deck
         if (not self.savedgame) and \
@@ -2151,8 +2160,10 @@ class CardGame(CardGameBaseClass, NodeMixin):
         # but don't remove death card/empty card if it is the only
         # card in the deck because a zero length hand/deck list
         # is not a good thing for how this program is designed.
-        if (self.deck.cards[0].suit != 4) and (self.deck.cards[0].rank != 0):
-            self.deck.remove_death_card()  # give deck another loop through
+        print game.name
+        print game.deck
+        if (game.deck.cards[0].suit != 4) and (game.deck.cards[0].rank != 0):
+            game.deck.remove_death_card()  # give deck another loop through
             # after any move
 
         # add sanitized move to move set
@@ -2240,6 +2251,904 @@ class CardGame(CardGameBaseClass, NodeMixin):
         #    undo move
 
         return True  # from do_move
+
+    @classmethod
+    def treeplay(self, tree, game, command=""):
+        """ this is the primary way to start playing a game. """
+
+        # print("playing")
+        # while not self.deck.is_empty():
+        #    self.board.p1.add (self.deck.cards[0])
+        #    self.deck.remove(self.deck.cards[0])
+
+        # this is the tournament -> game -> PLAY command loop
+        class Playshell(cmd.Cmd):
+            """Tree Game playing command processor."""
+            intro = \
+                'Start playing the tree game. Type help or ? to list commands.\n'
+            prompt = 'tree play> '
+
+            def preloop(self):
+                """Do this when cmdloop() starts."""
+
+                # handle any auto-commands for this cmdloop run
+
+                #  handle any auto-commands set by the game (ag)
+                global PLAY_COMMAND_QUEUE  # auto-commanding when needed
+                self.cmdqueue = PLAY_COMMAND_QUEUE  # do any auto-comments
+
+                #  set any auto-command we want the nex cmploop to run
+                pass
+
+                # Print board 1st time into playing loop
+                self.display_board(game)
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_pass(self, arg):
+                """Do nothing command"""
+                print "Doing nothing!"
+                return False  # continue command loop
+
+            @classmethod
+            def do_tt(self, arg):
+                """Display traversing tree"""
+                'tt: DISPLAY ITERATION OF GAME TREE'
+                print("render tree game")
+                print(RenderTree(tree))
+                print
+                print(RenderTree(tree, style=AsciiStyle()).by_attr())
+                print
+                for pre, _, node in RenderTree(tree):
+                    treestr = u"%s%s" % (pre, node.name)
+                    print(treestr.ljust(8), node.name)
+
+                # This loop will traverse the total game tree returning each node/game
+                # in the tree.
+                # The tree is structured such that each parent is a game and each child
+                # is a mm move game of the parent.
+                # If the game has not been played its move sould be played, it should be
+                # marked as played, and its mm move children should be created with their
+                # played set to false (not played yet).
+                # This tree playing tree traversal should continue until all children are
+                # marked at played true.  When a child's played is true that mean that
+                # particular game branch (a complete unique set of moves that represent one
+                # game of all possible games from the initial deal/root) is either winnable
+                # set to true or winnable set to false meaning no know solution. Where,
+                # in this game playing strategy, the known solution is only as good as
+                # the hardcoded (no AI here) programmer inspired game playing move selection
+                # algorithm.
+                for node in PreOrderIter(tree):
+                    try:
+                        if not node.played:
+                            print(node.name, node.played, "This game needs to be played")
+                        else:
+                            print(node.name, node.played, "This game is played and its move children should eventually be too")
+                    except:
+                        print(node.name, "NODE TYPE  NOT a CardGame mixin type")
+                        print("Unexpected error:", sys.exc_info()[0])
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_dt(self, arg):
+                """Display tree"""
+                'dt: DISPLAY TREE'
+                print("render tree game")
+                print(RenderTree(game))
+                print
+                for pre, _, node in RenderTree(game):
+                    treestr = u"%s%s" % (pre, node.name)
+                    print(treestr.ljust(8), node.name, "game")
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_ci(self, arg):
+                """Check integrity of board (program debug)"""
+                'ci: CHECK INTEGRITY'
+                if not game.board.check_board_integrity(self):  # pass in game
+                    print "Board did not pass!"
+                else:
+                    print "Board passed!"
+                return False  # continue command loop
+
+            @classmethod
+            def do_lm(self, arg):
+                """List how many moves made in this game"""
+                'lm: LIST NUMBER OF MOVES MADE'
+
+                print "We made " + str(game.movescount) + " moves."
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_llow(self, arg):
+                """List low cards in each suit"""
+                'llow: LIST LOW CARDS IN SUITS'
+
+                # clubs (black suit)
+                clublow1card, \
+                clublow2card, \
+                clublowlow = game.board.check_suit_lowlow_condition(
+                    game=game, suit=0)
+
+                # diamonds (red suit)
+                diamondlow1card, \
+                diamondlow2card, \
+                diamondlowlow = game.board.check_suit_lowlow_condition(
+                    game=game, suit=1)
+
+                # hearts (red suit)
+                heartlow1card, \
+                heartlow2card, \
+                heartlowlow = game.board.check_suit_lowlow_condition(
+                    game=game, suit=2)
+
+                # spades (black suit)
+                spadelow1card, \
+                spadelow2card, \
+                spadelowlow = game.board.check_suit_lowlow_condition(
+                    game=game, suit=3)
+
+                # print in color order
+                print clublow1card + clublow2card
+                print spadelow1card + spadelow2card
+                print diamondlow1card + diamondlow2card
+                print heartlow1card + heartlow2card
+
+            @classmethod
+            def do_lsuits(self, arg):
+                """List cards in each suit"""
+                'lsuits: LIST CARD IN SUITs'
+
+                cardlist = game.board.list_suits()
+
+                line = ""
+                suit = 0
+                for rank in range(0, 13):
+                    line += str(cardlist[(suit * 13) + rank])
+                clubs = line
+
+                line = ""
+                suit += 1
+                for rank in range(0, 13):
+                    line += str(cardlist[(suit * 13) + rank])
+                diamonds = line
+
+                line = ""
+                suit += 1
+                for rank in range(0, 13):
+                    line += str(cardlist[(suit * 13) + rank])
+                hearts = line
+
+                line = ""
+                suit += 1
+                for rank in range(0, 13):
+                    line += str(cardlist[(suit * 13) + rank])
+                spades = line
+
+                # print in color order
+                print clubs
+                print spades
+                print diamonds
+                print hearts
+
+            @classmethod
+            def do_ld(self, arg):
+                """List destination cards on the board (program debug)"""
+                'lv: LIST DESTINATION CARDS'
+                print(','.join(card.name
+                               for card in game.board.list_destination_cards()))
+                return False  # continue command loop
+
+            @classmethod
+            def do_lv(self, arg):
+                """List visible cards on the board (program debug)"""
+                'lv: LIST VISIBLE CARDS'
+                print(','.join(card.name
+                               for card in game.board.list_visible_cards()))
+                return False  # continue command loop
+
+            @classmethod
+            def do_ls(self, arg):
+                """List source cards (program debug)"""
+                'ls: LIST SOURCE CARDS'
+                print(','.join(card.name
+                               for card in game.board.list_source_cards()))
+                return False  # continue command loop
+
+            def do_exit(self, arg):
+                """Exit playing"""
+                'exit:   EXIT'
+                # print ("Thanks for playing!")
+                self.close()
+                return True  # exit command loop
+
+            @classmethod
+            def close(self):
+                """ close """
+                pass
+
+            @classmethod
+            def postloop(self):
+                """Print playing command loop goodbye"""
+                # print "exiting playing command loop"
+                print "We played " + str(game.movescount) + " moves."
+                if game.movescount < 300:
+                    for i, move in enumerate(game.gamemoves):
+                        # print i, "  ", move
+                        pass
+                return True  # exit play command loop
+
+            @classmethod
+            def postcmd(self, stop, line):
+                """Display board after each command"""
+
+                skip = ['?', 'ci', 'db', 'exit',
+                        'help', 'ld', 'lgm', 'llow',
+                        'lm', 'ls', 'lsuits', 'lv', 'm', 'mm',
+                        'pass']
+                if "help" in line:  # condition help command line
+                    line = "help"
+
+                # display board after some commends
+                if ((not stop) and  # no display on exit
+                        (line not in skip)):  # not a helper command
+                    self.display_board(game)  # then display board
+
+                return stop  # may continue or may be an exit command
+
+            @classmethod
+            def do_lgm(self, arg):
+                """List game moves (moves made)"""
+                'lgm: LIST MOVES MADE'
+
+                print "We played " + str(game.movescount) + " moves."
+                for i, move in enumerate(game.gamemoves):
+                    print (i), "  ", move
+                return False  # continue command loop
+
+            @classmethod
+            def do_db(self, arg):
+                """Display board"""
+                'db: DISPLAY BOARD'
+                game.board.display_board(game)  # pass in game to get access
+                # to the deck
+                return False  # continue command loop
+
+            @classmethod
+            def do_dd(self, arg):
+                """Deal card from deck"""
+                'dd: DEAL FROM DECK'
+
+                # get a new playing card from deck
+                if not game.deck.rotate(game):
+                    # When here:
+                    # deck rotation returned a death card meaning
+                    # all the deck cards have been checked for moves
+                    #
+                    # This means special techniques are needed to
+                    # determine if game is winnable.
+                    # For example: walking up the ladder
+
+                    print "Uh oh End of Game?"
+
+                    # try some special techniques here
+
+                    # check to see if walking up the ladder is possible
+                    # by checking if board is in a lowlow condition
+                    blacks, \
+                    reds = game.board.check_board_lowlow_condition(game)
+
+                    # display how many suits in lowlow
+                    # this might help determine if walking up ladder
+                    # is possible
+                    print str(blacks) + " black  " + \
+                          str(reds) + " red suits in lowlow"
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_u(self, arg):
+                """Undo moves"""
+                'u: UNDO MOVES'
+
+                # travel game moves until an undoable move found
+                candidatemove = None
+                for candidatemove in reversed(game.gamemoves):
+
+                    # check an undoable move
+                    if (not candidatemove.wasundone) and \
+                            (not candidatemove.isundo) and \
+                            (candidatemove.moveid != 0):  # move 0 is not playable
+                        # we found the next move to undo
+                        break
+                    else:
+                        # this candidatemove is not undoable because
+                        # it is was either already undone or
+                        # is an undo move itself or
+                        # it is the 0th move which is not a real
+                        #   move- it just contains the original game
+                        candidatemove = None  # mark this move ineligable
+
+                # go do the undo move if found one
+                # else display no undo available message and return
+                if candidatemove is not None:
+
+                    # print "candidatemove = " + str(candidatemove)
+
+                    # find game of previous move because this is the
+                    # game to compare after undoing candidate move
+                    #  think about it!
+
+                    # travel up from candidatemove to find previous move
+                    premove = game.gamemoves[0]  # defaulf to original game
+                    for ipremove in range((candidatemove.gamemove - 1),
+                                          -1, -1):
+
+                        if False:  # True:
+                            print "undbg" + str(ipremove) + " " + \
+                                  str(game.gamemoves[ipremove])
+
+                            if game.gamemoves[ipremove].wasundone:
+                                print "was undone"
+
+                            if game.gamemoves[ipremove].isundo:
+                                print "is undo"
+
+                            if game.gamemoves[ipremove].moveid == 0:
+                                print "is original game"
+
+                        # skip over undoable moves
+                        if (game.gamemoves[ipremove].wasundone) or \
+                                (game.gamemoves[ipremove].isundo) or \
+                                (game.gamemoves[ipremove].moveid == 0):
+
+                            # this premove is undoable anyway
+                            continue  # keep looking for a doable premove
+
+                        else:
+
+                            # we found the previous move
+                            #  this is the next one up from the candidatemove
+                            premove = game.gamemoves[ipremove]
+                            break  # leave ipremove loop because we found it
+
+                    if False:  # True:
+                        print "vvvvvvvvvvvvvvvvv board before undo"
+
+                        print "pre move = " + str(premove)
+                        print "un  move = " + str(candidatemove)
+
+                        self.do_db(arg="")
+                        game.board.check_board_integrity(game)  # pass in game
+                        print "^^^^^^^^^^^^^^^^^ board before undo"
+
+                    # perform the unmove
+                    game.do_unmove(move=candidatemove,  # peform move
+                                   game=game)  # need game board
+
+                    # check for integrity after an undo
+                    # print "vvvvvvvvvvvvvvvvvvvvv board after undo"
+                    # self.do_db(arg="")
+                    if not game.board.check_board_integrity(game):
+                        return True  # True means board failed integrity check
+
+                    # check this new game (just unmoved) against the game
+                    # saved after the orginal move
+                    if not game.board.compare_games(game,  # this game right now
+                                                    premove):  # original game
+                        return True  # True means board failed compare check
+                    # print "^^^^^^^^^^^^^^^^^^^^^ board after undo"
+
+                else:
+                    print "No undo moves available"
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_ua(self, arg):
+                """Undo all moves"""
+                'ua: UNDO ALL MOVES'
+
+                # travel all current game moves until all undone
+                for candidatemove in reversed(game.gamemoves):
+
+                    # this will select the next undoable move
+                    # and undo it
+                    if self.do_u(arg=""):
+                        return True  # exit command loop
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_m(self, arg):
+                """Show priority moves on board"""
+                'm: SHOW MOVES'
+
+                # get available moves on board
+                branches, moves = self.get_moves(game)
+
+                # display moves
+                if len(moves) > 0:  # we have some moves to display
+
+                    movedisplayed = False  # display help message or not
+
+                    for move in moves:
+                        if move.movevalue < 1000:
+                            print move
+                            movedisplayed = True  # no help needed
+
+                    if not movedisplayed:
+                        print "No useful moves. Try dd or mm."
+
+                else:  # no moves show hint
+
+                    print "No moves. Try dd."
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_mm(self, arg):
+                """Show all moves on board"""
+                'mm: SHOW ALL MOVES'
+
+                # get available moves on board
+                branches, moves = self.get_moves(game)
+
+                # display moves
+                if len(moves) > 0:  # we have some moves to display
+
+                    for move in moves:
+                        if True:  # match structure of do_m above
+                            print move
+
+                else:  # no moves show hint
+
+                    print "No moves. Try dd."
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_mmn(self, arg):
+                """Make tree node from all moves on the board with current game being parent"""
+                'mmn: MAKE ALL MOVE NODES AS CHILDREN OF CURRENT GAME'
+
+                # get available moves on board
+                branches, moves = self.get_moves(game)  # get new move list
+
+                # play move n from list of moves
+                for move in moves:
+                    if True:  # make each move a child node gamem
+
+                        # when here:
+                        # 1. game is virgin tree node (node of parent games)
+                        # now we should create a game child node that is
+                        #  a new game clone of current game where the new
+                        #  game child does the move
+
+                        # save game creation 'move' to the list of game moves
+                        childgame = CardGame(
+                            name=str(move)[0:18],  # name this node after the move unique substring
+                            board=copy.deepcopy(game.board),  # the game has a board
+                            deck=copy.deepcopy(game.deck),  # game has a deck
+                            gamemoves=copy.deepcopy(game.gamemoves),  # list of which moves played this game
+                            movescount=copy.deepcopy(game.movescount),  # how many moves played this game
+                            savedgame=True,  # tree clone as saved so __init__() doesn't shuffle
+                            parent=game
+                            # use defaults for all other game attributes
+                        )  # create game with a deck
+
+                        # complete childgame node cloning of parent game
+                        childgame.originaldeck = copy.deepcopy(game.deck),  # either a fresh deck or a saved deck
+                        childgame.savedgame = copy.deepcopy(game.savedgame),  # don't deal if already known game
+                        childgame.winnable = game.board.check_board_won(childgame),  # pass in copy.deepcopy(game
+
+                        node = Node(childgame.name, parent=game, game=childgame)
+
+                        # some debug see-thru prints
+                        #print node.game.name
+                        #print game.deck.cards
+                        #print childgame.deck.cards
+
+                        # do not play this move cause this is a node creation function
+                        #childgame.do_move(move, childgame)  # perform move in new child node
+
+                        childgame.winnable = game.board.check_board_won(childgame),  # pass in copy.deepcopy(game
+
+                    # when here:
+                    # 1. the current game now has this move as one of its
+                    #    children game
+
+                    continue  # loop until select move is played
+
+                # mark the parent game as played is true cause its children move games
+                # have been created.
+                game.played = True;  # this game played to get resulting moves mm list
+
+                # when here:
+                # 1. the current game now has each of its possible moves
+                #    as children games. The children move game should all
+                #    be played false meaning they need to be played.
+                # 2. each children game should be 'do_move()' and then
+                #    those moves resulting from that 'do_move()' should then
+                #    become children games
+                # 3. the parent game should be marked as played is true to indicate
+                #    this game has had its children move nodes (mixedin please) created.
+
+                # check for won game after this move
+                if game.board.check_board_won(childgame):  # pass in game
+                    print "Board won! " + str(childgame.movescount)
+                    childgame.winnable = True
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_p(self, arg):
+                """Play a move: p n where n is from m command"""
+                'p n: PLAY MOVE N'
+
+                """This command is written to assume that the user
+                   does a 'm' to see the available moves then does
+                   a 'p n' to play one of those moves.
+                   However this routine gets a whole new move list.
+                   This means that the user can only do a single
+                   'p n' because this routine gets a new move list
+                   and that makes the moves displayed by the 'm'
+                   command obsolete.
+                   I know a user that would like to do a 'p 1' and
+                   then a 'p 2' but doing that probably will not
+                   execute the 'm''s move #2 because the 'p 2' re-gens
+                   the move list.
+                """
+
+                # allow command line 'p' to mean 'p [1|a]' shortcut
+                if len(arg) == len(""):  # no n on command line
+                    movenumber = 1  # a single p command is move #1
+
+                # check for p's command line argument
+                else:  # if there is an n arg try to convert to move number
+
+                    # try to convert to integer command number
+                    try:
+                        # allow character shortcuts due to phone
+                        # terminal alpha to numeric switching
+                        if arg[0] == 'a':
+                            movenumber = 1
+                        elif arg[0] == 'b':
+                            movenumber = 2
+                        elif arg[0] == 'c':
+                            movenumber = 3
+                        elif arg[0] == 'd':
+                            movenumber = 4
+                        elif arg[0] == 'e':
+                            movenumber = 5
+                        elif arg[0] == 'f':
+                            movenumber = 6
+                        elif arg[0] == 'g':
+                            movenumber = 7
+                        elif arg[0] == 'h':
+                            movenumber = 8
+                        elif arg[0] == 'i':
+                            movenumber = 9
+                        else:
+                            movenumber = int(arg[0:])  # convert real n argument
+                    except Exception:
+                        print "need a move numnber  try m then p n"
+                        return False  # keep command looping
+
+                # when here:
+                # movenumber should contain integer user selected move to do
+
+                # get available moves on board
+                branches, moves = self.get_moves(game)  # get new move list
+
+                # play move n from list of moves
+                for move in moves:
+                    if movenumber == move.movenumber:  # play this selected move
+
+                        # when here:
+                        # 1. game is virgin tree node (node of parent games)
+                        # now we should create a game child node that is
+                        #  a new game clone of current game where the new
+                        #  game child does the move
+
+                        #childgame=copy.deepcopy(game)
+                        # here are the attibutes of a game
+                        # save game creation 'move' to the list of game moves
+
+                        # play this move
+                        game.do_move(move, game)  # perform move in new child node
+
+                        game.winnable = game.board.check_board_won(game),  # pass in copy.deepcopy(game
+
+                    # when here:
+                    # 1. game updated to that move
+                    # 2. the move just played, and the resulting game
+                    #    have been saved to the list of gamemoves
+
+                    continue  # loop until select move is played
+
+                # when here:
+                # if 'n' was found in the move list then
+                # the move should have been made
+                # else no move made
+
+                # check for won game after this move
+                if game.board.check_board_won(childgame):  # pass in game
+                    print "Board won! " + str(childgame.movescount)
+                    childgame.winnable = True
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_a(self, arg):
+                """Autoplay a game"""
+                'a: AUTOPLAY GAME'
+
+                playing = True
+                while playing:  # autoplay until board wins or gets stuck
+
+                    # get available moves on board
+                    branches, moves = self.get_moves(game)
+
+                    movesmade = game.movescount  # how many moves made
+                    # this round?
+
+                    # select moves to play
+                    # This loop causes the computer to play the highest
+                    # prio move on the board.
+                    #
+                    # Moves are prioritized by a move value where
+                    # the lowest values are the highest priority moves.
+                    # As of now ;) the prio values are 100 <= value <= 1000
+                    # where the 1000 prio's are really the special moves
+                    # that need to be made during special processing like
+                    # walking up the ladder.
+                    # So this loop is limited to considering prios
+                    # 100 <= value < 1000 meaning the 1000 prio moves
+                    # will not be made by this loop.
+                    #
+                    # See the special processing code below that might
+                    # exists ;) that could use the 1000 prio moves.
+                    #
+                    didmove = False  # loop until highest prio move made
+                    #    loop low to high priority
+                    for prio in range(100, (1000 - 100), 100):
+
+                        # loop all available moves doing only one of prio
+                        for move in moves:
+                            # print move
+                            if move.movevalue < (prio + 1):
+                                game.do_move(move, game)  # perform move
+
+                                didmove = True  # indicate a move made this
+                                # prio
+                                break  # break from for once a move is made
+
+                        if didmove:  # if did move(s) at this prio
+                            break  # break out; else loop at next
+                            # lower prio
+
+                    # if here then either:
+                    # 1. a highest available prio move was made
+                    #    (and inc move count)
+                    # or
+                    # 2. no move was made (no inc move count was made)
+
+                    # deal from deck if no moves on board
+                    if movesmade == game.movescount:  # deal from deck
+                        # if no moves made
+                        # just now
+
+                        # get a new playing card from deck by rotating deck
+                        playing = game.deck.rotate(game)
+
+                        if not playing:  # out of moves?
+
+                            print "Uh oh End of Game?"
+                            playing = False
+
+                            # try some special techniques here
+
+                            # check to see if walking up the ladder
+                            # is possible by checking if board is in
+                            # a lowlow condition
+                            blacks, \
+                            reds = \
+                                game.board.check_board_lowlow_condition(game)
+
+                            # display how many suits in lowlow
+                            # this might help determine if walking up
+                            # ladder is possible
+                            print str(blacks) + " black  " + \
+                                  str(reds) + " red suits in lowlow"
+
+                            break  # exit autoplaying while loop
+
+                        else:
+                            # print "dealt from deck"
+                            pass  # play again with new deck card visible
+
+                    # terminate endless game  (darn sets!)
+                    if game.movescount > 300:  # abandon this game
+                        playing = False
+                        break  # exit autoplaying while loop
+
+                    game.board.display_board(game)  # pass in game to get
+                    # access to the deck
+
+                    print "^^^^^^^ " + str(game.movescount) + " ^^^^^^^"
+
+                    # check for program logic error
+                    #  this will fail if mutiple moves allowed before
+                    #  recalculating moves
+                    if not game.board.check_board_integrity(self):
+                        # game.board.display_board(self) # pass in game
+                        # to get access to
+                        # the deck
+                        print "Board did not pass!"
+                        playing = False
+                        break  # exit autoplaying while loop
+
+                    # check for won game
+                    if game.board.check_board_won(game):  # pass in game
+                        # game.board.display_board(game) # pass in game to get
+                        # access to the deck
+                        print "Board won! " + str(game.movescount)
+                        playing = False
+
+                        # print "saving move" + str(game.gamemoves[0])
+                        # save this winning game
+                        game.winningmoves = game.gamemoves
+                        game.savedgame = True
+                        game.winnable = True
+
+                        # save a winning game, or not
+                        if False:  # True: # False:
+
+                            # store game to file
+                            filehandler = open("winner", 'w')
+
+                            # serialize game to file
+                            pickle.dump(game, filehandler)
+                            filehandler.close()
+
+                        # filehandler = open(filename, 'r')
+                        # object = pickle.load(filehandler)
+                        break  # exit autoplaying while loop
+
+                    # when here:
+                    # 1. a move or rotate deck move has been made
+                    #    so go play to play another move
+                    # 2. else we'd have broken out of the play loop
+                    #    for some other reason
+
+                # end of playing while loop
+
+                # when here:
+                # 1. the autoplay loop has finished for some reason
+                #    a. game won
+                #    b. endless game
+                #    c. board integrity check failed
+
+                return False  # continue command loop
+
+            @classmethod
+            def display_board(self, game):
+                """Display board"""
+                game.board.display_board(game)  # pass in game to get access
+                # to the deck
+                return False  # continue command loop
+
+            @classmethod
+            def get_moves(self, game):
+                """Get list of available moves on board"""
+
+                # get movable cards
+                sourcecards = game.board.list_source_cards()
+                # get possible destinations
+                destinationcards = game.board.list_destination_cards()
+
+                # find possible moves
+                moves = \
+                    game.board.list_moves(sourcecards=sourcecards,
+                                          destinationcards=destinationcards,
+                                          moveset=game.moveset)
+
+                # determine the number of game trees represented by
+                # this move set
+                sourcecarddict = {}  # start empty with seen source cards
+                for move in moves:
+
+                    # for now only count trees in prio moves
+                    if move.movevalue < 1000:
+
+                        # tally if this sourcecard seen in moves already
+                        try:
+
+                            # increment source card count in dict if card
+                            # already seen
+                            sourcecarddict[move.sourcecard.name] += 1
+
+                        except Exception:
+
+                            # first time source card is seen
+                            sourcecarddict[move.sourcecard.name] = 1
+
+                # When here:
+                # the dict should have each sourcecard as a key
+                # and the count of how many times that source card
+                # showed up in a move
+                # print sourcecarddict
+                numbranches = 0  # how many tree branches on the board now?
+                for name, number in sourcecarddict.items():
+                    # print('{0} seen {1} times'.format(name, number))
+                    numbranches += number
+
+                return numbranches, moves
+
+            # save current game to file
+            def do_sg(self, arg):
+                """Save Current Game"""
+                'SG: SAVE GAME'
+
+                # get saved game file name from user
+                filename = raw_input("file name> ")  # type: str
+
+                # try to open the file
+                try:
+                    filehandler = open(filename, 'w')
+                except IOError:
+                    print \
+                        "Unable to open the file " + filename + ", try again"
+                    print("Unexpected error:", sys.exc_info()[0])
+                    return False  # keep command looping
+
+                # save this game
+                game.winningmoves = game.gamemoves
+                game.savedgame = True
+
+                # check for won game for proper .winnable setting
+                if game.board.check_board_won(game):  # pass in game
+                    # needs to be true if won for reload playing
+                    game.winnable = True
+                else:
+                    game.winnable = False
+
+                # try to save the game
+                try:
+
+                    # serialize game to file
+                    # FIXME: this failes when game is anytree NodeMixIn type  does not fail when just object type
+                    pickle.dump(game, filehandler)
+
+                    filehandler.close()
+
+                except Exception:
+                    print "Unable to save game (pickle failed), try again"
+                    print("Unexpected error:", sys.exc_info()[0])
+                    return False  # keep command looping
+
+                else:
+                    print "Saved game: " + filename
+
+        # when here:
+        # the user selected the 'play' command from the 'game>' command
+        # loop
+
+        # allow user to play this game using 'play>' command loop
+        Playshell().cmdloop()
+
+        # when here:
+        # 1. we have exited the 'play>' Playshell command loop
+        #
+        # we are done playing this game
+        # return to outer game> command loop
+
+        return True  # return from playing this game
 
     @classmethod
     def play(self, tree, game, command=""):
@@ -3052,6 +3961,58 @@ class TreeGameshell(cmd.Cmd):
         )  # create game with a deck
 
         self.game = self.tree
+        print self.game.played, self.tree.played
+
+        my0 = CardGame(
+            name='root',  # game tree root  1st node
+            board=SBoard(),  # create game with specific board
+            deck=Deck(),
+            gamemoves=[],
+            played=False
+            # use defaults for all other game attributes
+        )  # create game with a deck
+
+        #print(RenderTree(self.tree))
+        for pre, _, node in RenderTree(self.tree):
+            treestr = u"%s%s" % (pre, node.name)
+            #print(treestr.ljust(8), node.name)
+
+        my0 = Node('root',game=self.game)
+        for pre, _, node in RenderTree(my0):
+            treestr = u"%s%s" % (pre, node.name)
+            #print(treestr.ljust(8), node.name)
+
+        # save game creation 'move' to the list of game moves
+        my2 = CardGame(
+            name='game1',  # game tree root  1st node
+            board=SBoard(),  # create game with specific board
+            deck=Deck(),
+            gamemoves=[],
+            parent=self.game
+            # use defaults for all other game attributes
+        )  # create game with a deck
+
+        my3 = Node("my3", parent=self.tree)
+        #print(RenderTree(self.tree))
+        for pre, _, node in RenderTree(self.tree):
+            treestr = u"%s%s" % (pre, node.name)
+            #print(treestr.ljust(8), node.name, "my3")
+
+        my4 = Node("my4", parent=my3)
+        print("render tree self.tree")
+        print(RenderTree(self.tree))
+        print
+        for pre, _, node in RenderTree(self.tree):
+            treestr = u"%s%s" % (pre, node.name)
+            print(treestr.ljust(8), node.name, "my4")
+
+        #my4 = Node("my4", parent=my3)
+        print("render tree self.game")
+        print(RenderTree(self.game))
+        print
+        for pre, _, node in RenderTree(self.game):
+            treestr = u"%s%s" % (pre, node.name)
+            print(treestr.ljust(8), node.name, "game")
 
         # save game creation 'move' to the list of game moves
         self.game.gamemoves.append(
@@ -3059,7 +4020,7 @@ class TreeGameshell(cmd.Cmd):
                  destinationcard=Card(hand=Hand(name="OriginalGame")),
                  gamestate=copy.deepcopy(self.game)))
 
-        self.game.play(self.tree, self.game, command="")
+        self.game.treeplay(self.tree, self.game, command="")
 
         return False  # continue command loop
 
@@ -3069,7 +4030,7 @@ class TreeGameshell(cmd.Cmd):
         try:
             s = 'Resuming tree game play...'  # type: str
             print s  # print now because ...play() is a command loop
-            self.game.play(self.game, command="")
+            self.game.treeplay(self.tree, self.game, command="")
         except:
             s = 'No tree game yet. Try nt...'  # type: str
             print s
@@ -3151,6 +4112,7 @@ class TreeGameshell(cmd.Cmd):
 
                 # load the saved game
                 try:
+                    # FIXME: no clue how do to this with a save tree game
                     self.game = \
                         CardGame(name=game.name,
                                  board=self.savedgame.board,
@@ -3164,7 +4126,7 @@ class TreeGameshell(cmd.Cmd):
                     return False  # continue command loop
 
                 # print "game.savedgame", str(self.game.savedgame)
-                self.game.play(self.game, command="")
+                self.game.treeplay(self.game, command="")
 
                 return True  # exit saved game command loop
 

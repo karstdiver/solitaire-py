@@ -40,7 +40,7 @@ EOF
 # import color  # for ansi color codes
 from color import colors  # for ansi color codes
 
-from treelib import *
+#from treelib import *
 from anytree import *
 
 # from copy import deepcopy # to copy objects
@@ -68,6 +68,7 @@ TREEGAME_COMMAND_QUEUE = ""  # auto-commanding when needed
 GAME_COMMAND_QUEUE = ""  # auto-commanding when needed
 PLAY_COMMAND_QUEUE = ""  # auto-commanding when needed
 GAMES_WON_COUNT = 0  # count how many games won this tournament
+GAMETREECOMPLETE = False  # True means no playable child game left in tree!
 
 
 # print "Hello Python!"
@@ -840,6 +841,34 @@ class SBoard(Board):
 
         # return the low cards and true if lowlow and false if not lowlow
         return low1card, low2card, (low1bool and low2bool)
+
+    def check_tree_completed(self, game):  # check to see if the game tree is complete
+        """Check if this tree is completed"""
+
+        # check tree completion criteria
+        # any node left to play?  if no then tree is complete
+        print(findall_by_attr(game, name="played", value=False))
+        if not findall_by_attr(game, name="played", value=False):
+            print("Game Tree Complete!")
+
+            GAMETREECOMPLETE = True  # true means no more children to play
+            return True  # this branch meets completion criteria
+        else:
+            GAMETREECOMPLETE = False  # false means keep playing
+            return False  # this branch has more children to play
+
+    def check_branch_completed(self, game):  # check to see if a winning game
+        """Check if this branch is completed"""
+
+        # check completed criteria
+        #print(id(game))
+        #print(game.name, game.played)
+        if game.played and \
+                game.is_leaf:  # no children part of completion criteria
+
+            return True  # this branch meets completion criteria
+        else:
+            return False  # this branch has more children to play
 
     def check_board_won(self, game):  # check to see if a winning game
         """Check if board has been won"""
@@ -2323,11 +2352,15 @@ class CardGame(CardGameBaseClass, NodeMixin):
                     try:
                         if not node.played:
                             print(node.name, node.played, "This game needs to be played")
+                            print(id(node))
                         else:
                             print(node.name, node.played, "This game is played and its move children should eventually be too")
                     except:
                         print(node.name, "NODE TYPE  NOT a CardGame mixin type")
                         print("Unexpected error:", sys.exc_info()[0])
+
+                print("Game Tree Height is ", tree.height)
+                print("Game Tree Depth is ", tree.depth)
 
                 return False  # continue command loop
 
@@ -2712,9 +2745,9 @@ class CardGame(CardGameBaseClass, NodeMixin):
                 return False  # continue command loop
 
             @classmethod
-            def do_mmn(self, arg):
-                """Make tree node from all moves on the board with current game being parent"""
-                'mmn: MAKE ALL MOVE NODES AS CHILDREN OF CURRENT GAME'
+            def do_mb(self, arg):
+                """Make game tree branch nodes from all moves on the board with current game being parent"""
+                'mb: MAKE ALL MOVE NODES AS CHILDREN OF CURRENT GAME'
 
                 # get available moves on board
                 branches, moves = self.get_moves(game)  # get new move list
@@ -2746,7 +2779,8 @@ class CardGame(CardGameBaseClass, NodeMixin):
                         childgame.savedgame = copy.deepcopy(game.savedgame),  # don't deal if already known game
                         childgame.winnable = game.board.check_board_won(childgame),  # pass in copy.deepcopy(game
 
-                        node = Node(childgame.name, parent=game, game=childgame)
+                        # this just seems to create a useless not mixedin tree node
+                        #node = Node(childgame.name, parent=game, game=childgame)
 
                         # some debug see-thru prints
                         #print node.game.name
@@ -2779,9 +2813,111 @@ class CardGame(CardGameBaseClass, NodeMixin):
                 #    this game has had its children move nodes (mixedin please) created.
 
                 # check for won game after this move
-                if game.board.check_board_won(childgame):  # pass in game
-                    print "Board won! " + str(childgame.movescount)
-                    childgame.winnable = True
+                try:
+                    if game.board.check_board_won(childgame):  # pass in game
+                        print "Board won! " + str(childgame.movescount)
+                        childgame.winnable = True
+                except:
+                    print(game.name, "Error: no moves found in this game")
+                    print("Unexpected error:", sys.exc_info()[0])
+
+                return False  # continue command loop
+
+            @classmethod
+            def do_pb(self, arg):
+                """Play a game tree branch move: pb where the game is selected as the current inorder move/child game"""
+                'pb: PLAY A SINGLE GAME TREE BRANCH MOVE '
+
+                """This command automatically picks the next child game to play.
+                   This command is based on the following:
+                     game> nt  # get a new tree object  this starts new game tree
+                     play> mm  # see moves
+                     play> mb  # make children game nodes from mm list
+                     play> tt  # traverse tree inorder to find game to play
+                     play> pb  # play this branch's first playable child
+                     
+                     The final state of the tree should be each leaf to have
+                     a .winnable value, .played is true, and has no children.
+                     When .winnable is True then this unique game tree branch is
+                     a winnable game. 
+                     When .winnable is false this game branch is unwinnable*.
+                """
+
+                # get available moves on board
+                branches, moves = self.get_moves(game)  # get new move list
+
+                # This loop will traverse the total game tree returning each node/game
+                # in the tree.
+                # The tree is structured such that each parent is a game and each child
+                # is a mm move game of the parent.
+                # If the game has not been played its move sould be played, it should be
+                # marked as played, and its mm move children should be created with their
+                # played set to false (not played yet).
+                # This tree playing tree traversal should continue until all children are
+                # marked at played true.  When a child's played is true that mean that
+                # particular game branch (a complete unique set of moves that represent one
+                # game of all possible games from the initial deal/root) is either winnable
+                # set to true or winnable set to false meaning no know solution. Where,
+                # in this game playing strategy, the known solution is only as good as
+                # the hardcoded (no AI here) programmer inspired game playing move selection
+                # algorithm.
+                foundchildgametoplay = False  # false means this is child game to play
+                global GAMETREECOMPLETE
+                GAMETREECOMPLETE = False  # reinit global true means no playable child game left in tree!
+                game.board.check_tree_completed(game.root)  # check to see if the game tree is complete
+                for node in PreOrderIter(game.root):
+
+                    # check for the unique game branch is completed
+                    #print node.played
+                    if game.board.check_branch_completed(node):  # pass in game
+                        print "Branch completed"  # + str(childgame.movescount)
+
+                        continue  # go to next inorder childgame
+
+                    try:
+                        if not node.played:  # false means a playable child game
+
+                            # check if first unplayed game found inorder
+                            if not foundchildgametoplay:  # false means this is child game to play
+                                print(node.name, node.played, "Playing this game now...")
+
+                                # play this move
+                                #game.do_move(move, node)  # perform move in new child node
+
+                                # set this game as played
+                                node.played = True  # true means don't play this game again  should become a parent unless branch is complete
+
+                                # check for won game after this move
+                                if game.board.check_board_won(node):  # pass in game
+                                    node.winnable = True
+
+                                # indicate we found the inorder game playes
+                                foundchildgametoplay = True
+
+                                # indicate we played a game else game tree is complete
+                                GAMETREECOMPLETE = False  # false means keep playing
+
+                                continue  # no need to process this ndoe
+
+                            else:
+                                print("this game will be played in the future")
+                        else:
+                            print(node.name, node.played, "This game is played and its move children should eventually be too")
+                    except:
+                        print(node.name, "NODE TYPE  NOT a CardGame mixin type in pb")
+                        print("Unexpected error:", sys.exc_info()[0])
+
+                    # when here:
+                    # 1. game updated to that move
+                    # 2. the move just played, and the resulting game
+                    #    have been saved to the list of gamemoves
+
+                    continue  # loop until select move is played
+
+                # when here:
+                # the move should have been made
+                # else no move made
+                # global set to any games left in tree or not  true  == game tree comp
 
                 return False  # continue command loop
 
@@ -3122,7 +3258,7 @@ class CardGame(CardGameBaseClass, NodeMixin):
                 try:
 
                     # serialize game to file
-                    # FIXME: this failes when game is anytree NodeMixIn type  does not fail when just object type
+                    # FIXME: this fails when game is anytree NodeMixIn type  does not fail when just object type
                     pickle.dump(game, filehandler)
 
                     filehandler.close()
@@ -3879,7 +4015,7 @@ class CardGame(CardGameBaseClass, NodeMixin):
                 try:
 
                     # serialize game to file
-                    # FIXME: this failes when game is anytree NodeMixIn type  does not fail when just object type
+                    # FIXME: this fails when game is anytree NodeMixIn type  does not fail when just object type
                     pickle.dump(game, filehandler)
 
                     filehandler.close()
@@ -3977,34 +4113,34 @@ class TreeGameshell(cmd.Cmd):
             treestr = u"%s%s" % (pre, node.name)
             #print(treestr.ljust(8), node.name)
 
-        my0 = Node('root',game=self.game)
-        for pre, _, node in RenderTree(my0):
-            treestr = u"%s%s" % (pre, node.name)
+        #my0 = Node('root',game=self.game)
+        #for pre, _, node in RenderTree(my0):
+        #    treestr = u"%s%s" % (pre, node.name)
             #print(treestr.ljust(8), node.name)
 
         # save game creation 'move' to the list of game moves
-        my2 = CardGame(
-            name='game1',  # game tree root  1st node
-            board=SBoard(),  # create game with specific board
-            deck=Deck(),
-            gamemoves=[],
-            parent=self.game
+        #my2 = CardGame(
+        #    name='game1',  # game tree root  1st node
+        #    board=SBoard(),  # create game with specific board
+        #    deck=Deck(),
+        #    gamemoves=[],
+        #    parent=self.game
             # use defaults for all other game attributes
-        )  # create game with a deck
+        #)  # create game with a deck
 
-        my3 = Node("my3", parent=self.tree)
+        #my3 = Node("my3", parent=self.tree)
         #print(RenderTree(self.tree))
-        for pre, _, node in RenderTree(self.tree):
-            treestr = u"%s%s" % (pre, node.name)
+        #for pre, _, node in RenderTree(self.tree):
+        #    treestr = u"%s%s" % (pre, node.name)
             #print(treestr.ljust(8), node.name, "my3")
 
-        my4 = Node("my4", parent=my3)
+        #my4 = Node("my4", parent=my3)
         print("render tree self.tree")
         print(RenderTree(self.tree))
         print
-        for pre, _, node in RenderTree(self.tree):
-            treestr = u"%s%s" % (pre, node.name)
-            print(treestr.ljust(8), node.name, "my4")
+        #for pre, _, node in RenderTree(self.tree):
+        #    treestr = u"%s%s" % (pre, node.name)
+        #    print(treestr.ljust(8), node.name, "my4")
 
         #my4 = Node("my4", parent=my3)
         print("render tree self.game")
@@ -4533,16 +4669,29 @@ class Tournamentshell(cmd.Cmd):
     def do_hint(self, arg):
         """Provide hint on how to play this game"""
         'hint:   HINT'
+        print "Play a manual game(mg) or a game tree game(tg)"
+        print "Play an automated manual games(ap) or auto tree games(atg)"
         print "To play a manual game:"
         print "tournament> mg"
         print "game> ng"
         print "play> m"
         print "play> p"
         print ""
-        print "To play an automatic game:"
+        print "To play an automatic manual game:"
         print "tournament> mg"
         print "game> ng"
         print "play> a"
+
+        print "To play a game tree game:"
+        print "tournament> tg"
+        print "game> nt"
+        print "play> m"
+        print "play> pb"
+        print ""
+        print "To play an automatic manual game:"
+        print "tournament> atg"
+        print "?game> ng"
+        print "?play> a"
 
         return False
 

@@ -40,7 +40,7 @@ EOF
 # import color  # for ansi color codes
 from color import colors  # for ansi color codes
 
-from treelib import *
+#from treelib import *
 
 # from copy import deepcopy # to copy objects
 # from copy import *

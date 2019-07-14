@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 """
+Uses a deck of cards from:
 http://www.openbookproject.net/books/bpp4awd/ch08.html
 """
 
@@ -41,7 +42,7 @@ EOF
 from color import colors  # for ansi color codes
 
 #from treelib import *
-from anytree import *
+from anytree import *  # install with: pip install anytree
 
 # from copy import deepcopy # to copy objects
 # from copy import *
@@ -2189,8 +2190,8 @@ class CardGame(CardGameBaseClass, NodeMixin):
         # but don't remove death card/empty card if it is the only
         # card in the deck because a zero length hand/deck list
         # is not a good thing for how this program is designed.
-        print game.name
-        print game.deck
+        print("Game name: ", game.name)
+        #print("Game deck: ", game.deck)
         if (game.deck.cards[0].suit != 4) and (game.deck.cards[0].rank != 0):
             game.deck.remove_death_card()  # give deck another loop through
             # after any move
@@ -2351,10 +2352,10 @@ class CardGame(CardGameBaseClass, NodeMixin):
                 for node in PreOrderIter(tree):
                     try:
                         if not node.played:
-                            print(node.name, node.played, "This game needs to be played")
-                            print(id(node))
+                            print(node.name, node.winnable, node.played, "This game needs to be played")
+                            #print(id(node))
                         else:
-                            print(node.name, node.played, "This game is played and its move children should eventually be too")
+                            print(node.name, node.winnable, node.played, "This game is played and its move children should eventually be too")
                     except:
                         print(node.name, "NODE TYPE  NOT a CardGame mixin type")
                         print("Unexpected error:", sys.exc_info()[0])
@@ -2800,7 +2801,7 @@ class CardGame(CardGameBaseClass, NodeMixin):
 
                 # mark the parent game as played is true cause its children move games
                 # have been created.
-                game.played = True;  # this game played to get resulting moves mm list
+                game.played = True  # this game played to get resulting moves mm list
 
                 # when here:
                 # 1. the current game now has each of its possible moves
@@ -2900,9 +2901,9 @@ class CardGame(CardGameBaseClass, NodeMixin):
                                 continue  # no need to process this ndoe
 
                             else:
-                                print("this game will be played in the future")
+                                print(node.name, node.played, "this game will be played in the future")
                         else:
-                            print(node.name, node.played, "This game is played and its move children should eventually be too")
+                            print(node.name, node.winnable, node.played, "This game is played and its move children should eventually be too")
                     except:
                         print(node.name, "NODE TYPE  NOT a CardGame mixin type in pb")
                         print("Unexpected error:", sys.exc_info()[0])

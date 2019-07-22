@@ -2351,10 +2351,19 @@ class CardGame(CardGameBaseClass, NodeMixin):
                 # algorithm.
                 for node in PreOrderIter(tree):
                     try:
+                        line = str(node.name) + \
+                               ' game one' if node.winnable else ' game not won' + \
+                               ' game played' if node.played else ' gamee not played' + \
+                               ' This game is played and its move children should eventually be too' if node.played else ' This game needs to be played'
+                        #line = node.name + 'sdfsdf'
+                        #line = str(node.name) + 'sdfsdf'
+                        print(line)
+
                         if not node.played:
-                            print(node.name, node.winnable, node.played, "This game needs to be played")
+                            print(node.name, node.winnable,  "game won" if node.winnable else "game not won", "game played" if node.played else "game not played" , "This game needs to be played")
                             #print(id(node))
                         else:
+                            print(node.name, node.winnable,  "game won" if node.winnable else "game not won", "game played" if node.played else "game not played" , "This game needs to be played")
                             print(node.name, node.winnable, node.played, "This game is played and its move children should eventually be too")
                     except:
                         print(node.name, "NODE TYPE  NOT a CardGame mixin type")
@@ -2723,6 +2732,17 @@ class CardGame(CardGameBaseClass, NodeMixin):
                     print "No moves. Try dd."
 
                 return False  # continue command loop
+
+            @classmethod
+            def do_hint(self, arg):
+                """Provide hint on how to play this game"""
+                'hint:   HINT'
+                print("list moves on the board(mm)  Each move will become a game tree branch")
+                print("Make game tree branch from moves(mb)")
+                print("Display game tree(tt)")
+                print("Play inorder branch(pb)")
+
+                return False
 
             @classmethod
             def do_mm(self, arg):
@@ -4086,6 +4106,13 @@ class TreeGameshell(cmd.Cmd):
         print won
 
         return False  # continue command loop
+
+    def do_hint(self, arg):
+        """Provide hint on how to play this game"""
+        'hint:   HINT'
+        print("Play a new game with a game tree(nt)")
+
+        return False
 
     def do_nt(self, arg):
         """Play new tree game"""

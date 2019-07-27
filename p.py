@@ -2867,6 +2867,11 @@ class CardGame(CardGameBaseClass, NodeMixin):
                 # get available moves on board
                 branches, moves = self.get_moves(game)  # get new move list
 
+                # get the first move to play from list of moves
+                # TODO: fix what happenes when no moves
+                # TODO: remember deal deck (dd) should always be a child move game...
+                move = next(iter(moves or []), None)
+
                 # This loop will traverse the total game tree returning each node/game
                 # in the tree.
                 # The tree is structured such that each parent is a game and each child
@@ -2903,7 +2908,7 @@ class CardGame(CardGameBaseClass, NodeMixin):
                                 print(node.name, node.played, "Playing this game now...")
 
                                 # play this move
-                                #game.do_move(move, node)  # perform move in new child node
+                                game.do_move(move, node)  # perform move in new child node
 
                                 # set this game as played
                                 node.played = True  # true means don't play this game again  should become a parent unless branch is complete
@@ -2918,7 +2923,7 @@ class CardGame(CardGameBaseClass, NodeMixin):
                                 # indicate we played a game else game tree is complete
                                 GAMETREECOMPLETE = False  # false means keep playing
 
-                                continue  # no need to process this ndoe
+                                continue
 
                             else:
                                 print(node.name, node.played, "this game will be played in the future")

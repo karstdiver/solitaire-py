@@ -57,14 +57,14 @@ import cmd
 import sys
 
 # global variables
-VERSION_STRING = "1.0"  # for about command
+VERSION_STRING = "1.1"  # for about command
 TOURNAMENT_COMMAND_QUEUE = ""  # auto-commanding when needed
 GAME_COMMAND_QUEUE = ""  # auto-commanding when needed
 PLAY_COMMAND_QUEUE = ""  # auto-commanding when needed
 GAMES_WON_COUNT = 0  # count how many games won this tournament
 
 
-# print "Hello Python!"
+# print("Hello Python!")
 
 # foundational playing card class
 class Card(object):
@@ -97,19 +97,19 @@ class Card(object):
              return a value of the move and if can be moved """
 
         if False:  # True:
-            print "sourcecard      " + sourcecard.name + \
+            print("sourcecard      " + sourcecard.name + \
                   " suit " + str(sourcecard.suit) + \
                   " rank " + str(sourcecard.rank) + \
                   " hand " + sourcecard.hand.name + \
                   " pos  " + str(sourcecard.position) + \
-                  " vis  " + str(sourcecard.visible)
+                  " vis  " + str(sourcecard.visible))
 
-            print "destinationcard      " + destinationcard.name + \
+            print("destinationcard      " + destinationcard.name + \
                   " suit " + str(destinationcard.suit) + \
                   " rank " + str(destinationcard.rank) + \
                   " hand " + destinationcard.hand.name + \
                   " pos  " + str(destinationcard.position) + \
-                  " vis  " + str(destinationcard.visible)
+                  " vis  " + str(destinationcard.visible))
 
         # set initial value to low priority move (for False returns)
         value = 2001  # higher value is lower priority
@@ -490,13 +490,13 @@ class Deck(object):
 
         # display move for debug
         if False:
-            print "did move: " + str(game.movescount) + " " + \
-                  str(game.gamemoves[-1])
+            print("did move: " + str(game.movescount) + " " + \
+                  str(game.gamemoves[-1]))
 
         # return False if reached a death card meaning
         # already looped through deck without a move
-        print self.cards[-1].name
-        print self.deathcard
+        print(self.cards[-1].name)
+        print(self.deathcard)
         if self.cards[-1].name == self.deathcard:
             playablecardfound = False  # hit the death card upon this rotation
         else:
@@ -575,9 +575,9 @@ class Deck(object):
     def remove(self, card):
         """ remove a particular card from a deck """
 
-        # print "removing " + card.name + " " + \
+        # print("removing " + card.name + " " + \
         #      card.hand.name + " " + str(card.position) + \
-        #      " from self." + self.name
+        #      " from self." + self.name)
 
         if card in self.cards:
             self.cards.remove(card)
@@ -1018,9 +1018,9 @@ class SBoard(Board):
 
                             if False:  # True:
                                 # display deck
-                                print "original deck:"
+                                print("original deck:")
                                 print(':' + ogame.board.deck.display_deck() + ':')
-                                print "current deck:"
+                                print("current deck:")
                                 print(':' + currentgame.board.deck.display_deck() + ':')
 
                             # found miscompare
@@ -1039,10 +1039,10 @@ class SBoard(Board):
                             miscomparelist += miscomparestring
 
         if len(miscomparelist) != 0:
-            print "miscompare list = *" + miscomparelist + "*"
-            print "vvvvvvvvvvvv original game vvvvvvvvvvvv"
+            print("miscompare list = *" + miscomparelist + "*")
+            print("vvvvvvvvvvvv original game vvvvvvvvvvvv")
             ogame.board.display_board(ogame)  # pass in game to get access
-            print "^^^^^^^^^^^^ original game ^^^^^^^^^^^^"
+            print("^^^^^^^^^^^^ original game ^^^^^^^^^^^^")
             raw_input("pause")
 
         return True  # if here the board passed checks
@@ -1077,7 +1077,7 @@ class SBoard(Board):
 
         # print "deck count = " + str(numcards)
         if numcards != 52:
-            print "Expected 52 cards. Counted " + str(numcards)
+            print("Expected 52 cards. Counted " + str(numcards))
             boardpassed = False  # board has card count problem
 
         # when here we know there are 52 card on the board
@@ -1089,9 +1089,9 @@ class SBoard(Board):
 
                 # check for internally consistent card position
                 if card.position != icard:  # card has wrong position?
-                    print "pile " + pile.name + " " + card.name + " " + \
+                    print("pile " + pile.name + " " + card.name + " " + \
                           "expected position " + str(icard) + " " + \
-                          "but card position is " + str(card.position)
+                          "but card position is " + str(card.position))
 
                     boardpassed = False  # board has pile position problem
 
@@ -1100,9 +1100,9 @@ class SBoard(Board):
                     continue  # skip empty cards
                 else:
                     if card.suit != pile.suit:  # mismatch pile
-                        print "pile " + " " + pile.name + " " + \
+                        print("pile " + " " + pile.name + " " + \
                               str(pile.suit) + "  card " + card.name + \
-                              " " + str(card.suit) + " " + str(card.rank)
+                              " " + str(card.suit) + " " + str(card.rank))
 
                         boardpassed = False  # board has piles problem
                         # raise mismatchinpile
@@ -1113,9 +1113,9 @@ class SBoard(Board):
 
                 # check for internally consistent card position
                 if card.position != icard:  # card has wrong position?
-                    print "stack " + stack.name + " " + card.name + " " + \
+                    print("stack " + stack.name + " " + card.name + " " + \
                           "expected position " + str(icard) + " " + \
-                          "but card position is " + str(card.position)
+                          "but card position is " + str(card.position))
 
                     boardpassed = False  # board has stack position problem
 
@@ -1130,9 +1130,9 @@ class SBoard(Board):
 
             # check for internally consistent card position
             if card.position != icard:  # card has wrong position?
-                print "deck " + card.name + " " + \
+                print("deck " + card.name + " " + \
                       "expected position " + str(icard) + " " + \
-                      "but card position is " + str(card.position)
+                      "but card position is " + str(card.position))
 
         return boardpassed  # f = board has problems
 
@@ -1140,10 +1140,10 @@ class SBoard(Board):
         """ visual display of structures on the board """
 
         # display discard piles
-        print '{0}'.format(game.board.p1)  # use __str__ for no prefix strings
-        print '{0}'.format(game.board.p2)
-        print '{0}'.format(game.board.p3)
-        print '{0}'.format(game.board.p4)
+        print('{0}'.format(game.board.p1))  # use __str__ for no prefix strings
+        print('{0}'.format(game.board.p2))
+        print('{0}'.format(game.board.p3))
+        print('{0}'.format(game.board.p4))
 
         # display deck
         print(':' + game.board.deck.display_deck() + ':')
@@ -1572,11 +1572,10 @@ class Move(object):
                 str(self.moveid) + ":" + \
                 str(self.gamemove)
 
-        except Exception, argument:
-            print "Bad move string because " + str(argument)
+        except Exception as argument:
+            print("Bad move string because " + str(argument))
 
         return movestring
-
 
 class CardGame(object):
     """ foundational class of a game containing a board and a deck
@@ -1784,41 +1783,41 @@ class CardGame(object):
                                                handname=move.undodupcard.hand.name)
 
         if False:  # True:
-            print "sourcecard " + ":" + \
+            print("sourcecard " + ":" + \
                   str(sourcecard) + ":" + \
                   sourcecard.hand.name + ":" + \
-                  str(sourcecard.position)
+                  str(sourcecard.position))
 
-            print "destinationcard " + ":" + \
+            print("destinationcard " + ":" + \
                   str(destinationcard) + ":" + \
                   destinationcard.hand.name + ":" + \
-                  str(destinationcard.position)
+                  str(destinationcard.position))
 
-            print "undosourcecard " + ":" + \
+            print("undosourcecard " + ":" + \
                   str(move.undosourcecard) + ":" + \
                   move.undosourcecard.hand.name + ":" + \
                   str(move.undosourcecard.position) + ":" + \
                   str(move.undosourcecard.suit) + ":" + \
-                  str(move.undosourcecard.rank)
+                  str(move.undosourcecard.rank))
 
-            print "undodestinationcard " + ":" + \
+            print("undodestinationcard " + ":" + \
                   str(move.undodestinationcard) + ":" + \
                   move.undodestinationcard.hand.name + ":" + \
                   str(move.undodestinationcard.position) + ":" + \
                   str(move.undodestinationcard.suit) + ":" + \
-                  str(move.undodestinationcard.rank)
+                  str(move.undodestinationcard.rank))
 
-            print "undosupcard " + ":" + \
+            print("undosupcard " + ":" + \
                   str(move.undosupcard) + ":" + \
                   move.undosupcard.hand.name + ":" + \
                   str(move.undosupcard.position) + ":" + \
-                  str(move.undosupcard.visible)
+                  str(move.undosupcard.visible))
 
-            print "undodupcard " + ":" + \
+            print("undodupcard " + ":" + \
                   str(move.undodupcard) + ":" + \
                   move.undodupcard.hand.name + ":" + \
                   str(move.undodupcard.position) + ":" + \
-                  str(move.undodupcard.visible)
+                  str(move.undodupcard.visible))
 
         # undo stack->[stack|pile] moves differently than the other moves
         if (not sourcecard.hand.name == "Deck") and \
@@ -1996,7 +1995,7 @@ class CardGame(object):
                  3. rotate
         """
 
-        print "doing move: " + str(move)
+        print("doing move: " + str(move))
 
         # save original cards values (for move.sourcecard restoration)
         #  1 of 2: save source card
@@ -2144,7 +2143,7 @@ class CardGame(object):
         # print self.moveset
 
         # print originalsourcehand
-        # print move.destinationcard.hand
+        # print(move).destinationcard.hand
         # raw_input("moved??")
 
         # when here the move object now has enough info to complete
@@ -2256,7 +2255,7 @@ class CardGame(object):
             @classmethod
             def do_pass(self, arg):
                 """Do nothing command"""
-                print "Doing nothing!"
+                print("Doing nothing!")
                 return False  # continue command loop
 
             @classmethod
@@ -2264,9 +2263,9 @@ class CardGame(object):
                 """Check integrity of board (program debug)"""
                 'ci: CHECK INTEGRITY'
                 if not game.board.check_board_integrity(self):  # pass in game
-                    print "Board did not pass!"
+                    print("Board did not pass!")
                 else:
-                    print "Board passed!"
+                    print("Board passed!")
                 return False  # continue command loop
 
             @classmethod
@@ -2274,7 +2273,7 @@ class CardGame(object):
                 """List how many moves made in this game"""
                 'lm: LIST NUMBER OF MOVES MADE'
 
-                print "We made " + str(game.movescount) + " moves."
+                print("We made " + str(game.movescount) + " moves.")
 
                 return False  # continue command loop
 
@@ -2308,10 +2307,10 @@ class CardGame(object):
                     game=game, suit=3)
 
                 # print in color order
-                print clublow1card + clublow2card
-                print spadelow1card + spadelow2card
-                print diamondlow1card + diamondlow2card
-                print heartlow1card + heartlow2card
+                print(clublow1card + clublow2card)
+                print(spadelow1card + spadelow2card)
+                print(diamondlow1card + diamondlow2card)
+                print(heartlow1card + heartlow2card)
 
             @classmethod
             def do_lsuits(self, arg):
@@ -2345,10 +2344,10 @@ class CardGame(object):
                 spades = line
 
                 # print in color order
-                print clubs
-                print spades
-                print diamonds
-                print hearts
+                print(clubs)
+                print(spades)
+                print(diamonds)
+                print(hearts)
 
             @classmethod
             def do_ld(self, arg):
@@ -2377,7 +2376,7 @@ class CardGame(object):
             def do_exit(self, arg):
                 """Exit playing"""
                 'exit:   EXIT'
-                # print ("Thanks for playing!")
+                # print("Thanks for playing!")
                 self.close()
                 return True  # exit command loop
 
@@ -2390,7 +2389,7 @@ class CardGame(object):
             def postloop(self):
                 """Print playing command loop goodbye"""
                 # print "exiting playing command loop"
-                print "We played " + str(game.movescount) + " moves."
+                print("We played " + str(game.movescount) + " moves.")
                 if game.movescount < 300:
                     for i, move in enumerate(game.gamemoves):
                         # print i, "  ", move
@@ -2420,9 +2419,9 @@ class CardGame(object):
                 """List game moves (moves made)"""
                 'lgm: LIST MOVES MADE'
 
-                print "We played " + str(game.movescount) + " moves."
+                print("We played " + str(game.movescount) + " moves.")
                 for i, move in enumerate(game.gamemoves):
-                    print (i), "  ", move
+                    print((i), "  ", move)
                 return False  # continue command loop
 
             @classmethod
@@ -2448,7 +2447,7 @@ class CardGame(object):
                     # determine if game is winnable.
                     # For example: walking up the ladder
 
-                    print "Uh oh End of Game?"
+                    print("Uh oh End of Game?")
 
                     # try some special techniques here
 
@@ -2460,8 +2459,8 @@ class CardGame(object):
                     # display how many suits in lowlow
                     # this might help determine if walking up ladder
                     # is possible
-                    print str(blacks) + " black  " + \
-                          str(reds) + " red suits in lowlow"
+                    print(str(blacks) + " black  " + \
+                          str(reds) + " red suits in lowlow")
 
                 return False  # continue command loop
 
@@ -2504,17 +2503,17 @@ class CardGame(object):
                                           -1, -1):
 
                         if False:  # True:
-                            print "undbg" + str(ipremove) + " " + \
-                                  str(game.gamemoves[ipremove])
+                            print("undbg" + str(ipremove) + " " + \
+                                  str(game.gamemoves[ipremove]))
 
                             if game.gamemoves[ipremove].wasundone:
-                                print "was undone"
+                                print("was undone")
 
                             if game.gamemoves[ipremove].isundo:
-                                print "is undo"
+                                print("is undo")
 
                             if game.gamemoves[ipremove].moveid == 0:
-                                print "is original game"
+                                print("is original game")
 
                         # skip over undoable moves
                         if (game.gamemoves[ipremove].wasundone) or \
@@ -2532,14 +2531,14 @@ class CardGame(object):
                             break  # leave ipremove loop because we found it
 
                     if False:  # True:
-                        print "vvvvvvvvvvvvvvvvv board before undo"
+                        print("vvvvvvvvvvvvvvvvv board before undo")
 
-                        print "pre move = " + str(premove)
-                        print "un  move = " + str(candidatemove)
+                        print("pre move = " + str(premove))
+                        print("un  move = " + str(candidatemove))
 
                         self.do_db(arg="")
                         game.board.check_board_integrity(game)  # pass in game
-                        print "^^^^^^^^^^^^^^^^^ board before undo"
+                        print("^^^^^^^^^^^^^^^^^ board before undo")
 
                     # perform the unmove
                     game.do_unmove(move=candidatemove,  # peform move
@@ -2559,7 +2558,7 @@ class CardGame(object):
                     # print "^^^^^^^^^^^^^^^^^^^^^ board after undo"
 
                 else:
-                    print "No undo moves available"
+                    print("No undo moves available")
 
                 return False  # continue command loop
 
@@ -2593,15 +2592,15 @@ class CardGame(object):
 
                     for move in moves:
                         if move.movevalue < 1000:
-                            print move
+                            print(move)
                             movedisplayed = True  # no help needed
 
                     if not movedisplayed:
-                        print "No useful moves. Try dd or mm."
+                        print("No useful moves. Try dd or mm.")
 
                 else:  # no moves show hint
 
-                    print "No moves. Try dd."
+                    print("No moves. Try dd.")
 
                 return False  # continue command loop
 
@@ -2618,11 +2617,11 @@ class CardGame(object):
 
                     for move in moves:
                         if True:  # match structure of do_m above
-                            print move
+                            print(move)
 
                 else:  # no moves show hint
 
-                    print "No moves. Try dd."
+                    print("No moves. Try dd.")
 
                 return False  # continue command loop
 
@@ -2677,7 +2676,7 @@ class CardGame(object):
                         else:
                             movenumber = int(arg[0:])  # convert real n argument
                     except Exception:
-                        print "need a move numnber  try m then p n"
+                        print("need a move numnber  try m then p n")
                         return False  # keep command looping
 
                 # when here:
@@ -2705,7 +2704,7 @@ class CardGame(object):
 
                 # check for won game after this move
                 if game.board.check_board_won(game):  # pass in game
-                    print "Board won! " + str(game.movescount)
+                    print("Board won! " + str(game.movescount))
                     game.winnable = True
 
                 return False  # continue command loop
@@ -2747,7 +2746,7 @@ class CardGame(object):
 
                         # loop all available moves doing only one of prio
                         for move in moves:
-                            # print move
+                            # print(move)
                             if move.movevalue < (prio + 1):
                                 game.do_move(move, game)  # perform move
 
@@ -2775,7 +2774,7 @@ class CardGame(object):
 
                         if not playing:  # out of moves?
 
-                            print "Uh oh End of Game?"
+                            print("Uh oh End of Game?")
                             playing = False
 
                             # try some special techniques here
@@ -2790,8 +2789,8 @@ class CardGame(object):
                             # display how many suits in lowlow
                             # this might help determine if walking up
                             # ladder is possible
-                            print str(blacks) + " black  " + \
-                                  str(reds) + " red suits in lowlow"
+                            print(str(blacks) + " black  " + \
+                                  str(reds) + " red suits in lowlow")
 
                             break  # exit autoplaying while loop
 
@@ -2807,7 +2806,7 @@ class CardGame(object):
                     game.board.display_board(game)  # pass in game to get
                     # access to the deck
 
-                    print "^^^^^^^ " + str(game.movescount) + " ^^^^^^^"
+                    print("^^^^^^^ " + str(game.movescount) + " ^^^^^^^")
 
                     # check for program logic error
                     #  this will fail if mutiple moves allowed before
@@ -2816,7 +2815,7 @@ class CardGame(object):
                         # game.board.display_board(self) # pass in game
                         # to get access to
                         # the deck
-                        print "Board did not pass!"
+                        print("Board did not pass!")
                         playing = False
                         break  # exit autoplaying while loop
 
@@ -2824,7 +2823,7 @@ class CardGame(object):
                     if game.board.check_board_won(game):  # pass in game
                         # game.board.display_board(game) # pass in game to get
                         # access to the deck
-                        print "Board won! " + str(game.movescount)
+                        print("Board won! " + str(game.movescount))
                         playing = False
 
                         # print "saving move" + str(game.gamemoves[0])
@@ -2930,7 +2929,7 @@ class CardGame(object):
                    filehandler = open(filename, 'w')
                 except IOError:
                     print \
-                        "Unable to open the file " + filename + ", try again"
+                        ("Unable to open the file " + filename + ", try again")
                     return False  # keep command looping
 
                 # try to save the game
@@ -2953,11 +2952,11 @@ class CardGame(object):
                     filehandler.close()
 
                 except Exception:
-                    print "Unable to save game, try again"
+                    print("Unable to save game, try again")
                     return False  # keep command looping
 
                 else:
-                    print "Saved game: " + filename
+                    print("Saved game: " + filename)
 
         # when here:
         # the user selected the 'play' command from the 'game>' command
@@ -2996,7 +2995,7 @@ class Gameshell(cmd.Cmd):
 
     def do_pass(self, arg):
         """Do nothing command"""
-        print "Doing nothing!"
+        print("Doing nothing!")
         return False  # continue command loop
 
     def do_status(self, arg):
@@ -3012,7 +3011,7 @@ class Gameshell(cmd.Cmd):
         except:
             pass
 
-        print won
+        print(won)
 
         return False  # continue command loop
 
@@ -3040,11 +3039,11 @@ class Gameshell(cmd.Cmd):
 
         try:
             s = 'Resuming game play...'  # type: str
-            print s  # print now because ...play() is a command loop
+            print(s)  # print now because ...play() is a command loop
             self.game.play(self.game, command="")
         except:
             s = 'No game yet. Try ng...'  # type: str
-            print s
+            print(s)
 
         return False  # continue command loop
 
@@ -3072,8 +3071,8 @@ class Gameshell(cmd.Cmd):
             def do_dir(arg):
                 """List contents of current directory"""
                 import os
-                print [os.path.join(os.getcwd(), f)
-                       for f in os.listdir(os.getcwd())]
+                print([os.path.join(os.getcwd(), f) \
+                       for f in os.listdir(os.getcwd())])
                 return False  # continue loop
 
             # get saved game file name from user
@@ -3087,18 +3086,18 @@ class Gameshell(cmd.Cmd):
                 try:
                     filehandler = open(filename, 'r')
                 except IOError:
-                    print "The file does not exist, try again"
+                    print("The file does not exist, try again")
                     return False  # keep command looping
 
-                # try to read the saved game
+                # try to read the save(d game
                 try:
                     self.savedgame = pickle.load(filehandler)
                 except Exception:
-                    print "Error reading the saved game, try again"
+                    print("Error reading the saved game, try again")
                     return False  # keep command looping
                 else:
-                    print "Loaded game from " + filename
-                    print "now try play"
+                    print("Loaded game from " + filename)
+                    print("now try play")
 
                 filehandler.close()
 
@@ -3125,7 +3124,7 @@ class Gameshell(cmd.Cmd):
                                  movescount=self.savedgame.movescount,
                                  savedgame=self.savedgame.savedgame)
                 except Exception:
-                    print "No game loaded. Try open first"
+                    print("No game loaded. Try open first")
                     print("Unexpected error:", sys.exc_info()[0])
                     return False  # continue command loop
 
@@ -3141,7 +3140,7 @@ class Gameshell(cmd.Cmd):
     def do_exit(self, arg):
         """Exit game"""
         'exit:   EXIT'
-        # print ("Thanks for playing!")
+        # print("Thanks for playing!")
         self.close()
         return True  # exit command loop
 
@@ -3173,7 +3172,7 @@ class Tournamentshell(cmd.Cmd):
     @staticmethod
     def do_pass(arg):
         """Do nothing command"""
-        print "Doing nothing!"
+        print("Doing nothing!")
         return False  # continue command loop
 
     @staticmethod
@@ -3230,9 +3229,9 @@ class Tournamentshell(cmd.Cmd):
             global GAMES_WON_COUNT
             winpercent = (GAMES_WON_COUNT / (i * 1.0)) * 100
 
-            print "                                       Game #" + \
+            print("                                       Game #" + \
                   str(i) + " Won " + str(GAMES_WON_COUNT) + " " + \
-                  str(winpercent) + "%"
+                  str(winpercent) + "%")
 
         return False  # continue command loop
 
@@ -3260,8 +3259,8 @@ class Tournamentshell(cmd.Cmd):
             def do_dir(arg):
                 """List contents of current directory"""
                 import os
-                print [os.path.join(os.getcwd(), f)
-                       for f in os.listdir(os.getcwd())]
+                print([os.path.join(os.getcwd(), f)
+                       for f in os.listdir(os.getcwd())])
                 return False  # continue loop
 
             # get saved game file name from user
@@ -3275,18 +3274,18 @@ class Tournamentshell(cmd.Cmd):
                 try:
                     filehandler = open(filename, 'r')
                 except IOError:
-                    print "The file does not exist, try again"
+                    print("The file does not exist, try again")
                     return False  # keep command looping
 
                 # try to read the saved game
                 try:
                     self.savedgame = pickle.load(filehandler)
                 except Exception:
-                    print "Error reading the saved game, try again"
+                    print("Error reading the saved game, try again")
                     return False  # keep command looping
                 else:
-                    print "Loaded game from " + filename
-                    print "now try play"
+                    print("Loaded game from " + filename)
+                    print("now try play")
 
                 filehandler.close()
 
@@ -3315,7 +3314,7 @@ class Tournamentshell(cmd.Cmd):
 
                 except Exception:
 
-                    print "No game loaded. Try open first"
+                    print("No game loaded. Try open first")
                     # print("Unexpected error:", sys.exc_info()[0])
 
                     return False  # continue command loop
@@ -3332,23 +3331,23 @@ class Tournamentshell(cmd.Cmd):
     def do_hint(self, arg):
         """Provide hint on how to play this game"""
         'hint:   HINT'
-        print "To play a manual game:"
-        print "tournament> mg"
-        print "game> ng"
-        print "play> m"
-        print "play> p"
-        print ""
-        print "To play an automatic game:"
-        print "tournament> mg"
-        print "game> ng"
-        print "play> a"
+        print("To play a manual game:")
+        print("tournament> mg")
+        print("game> ng")
+        print("play> m")
+        print("play> p")
+        print("")
+        print("To play an automatic game:")
+        print("tournament> mg")
+        print("game> ng")
+        print("play> a")
 
         return False
 
     def do_exit(self, arg):
         """Exit program"""
         'exit:   EXIT'
-        print "Thanks for playing!"
+        print("Thanks for playing!")
         self.close()
         return True  # exit command loop
 
@@ -3365,7 +3364,7 @@ class Tournamentshell(cmd.Cmd):
         """Provide version information"""
         'about:   ABOUT'
         global VERSION_STRING
-        print "Version: " + VERSION_STRING
+        print("Version: " + VERSION_STRING)
 
         return False
 

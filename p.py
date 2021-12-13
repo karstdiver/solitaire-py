@@ -128,13 +128,13 @@ nE  <--- suit pile
 | |                                                                   |        |
 V V                                                                   V        V
 :3D 9C 1D 9D 6H 8C 1C KD 2D 3S 4H 3H JS 4S 7S 5S 6D 2C AC KH QD 6C AS 7D   dc=:9C::
-nE nE nE nE nE nE nE
 
 +--- card stacks
 |
 | only the cards on the diagonal are visible/playable
 | the cards not on the diagonal are not visible (unless cheating?)
 V
+nE nE nE nE nE nE nE <-- "no card" spaces at the bottom of stacks (if stack empties)
 QH 4D JD 1H JH 6S 8H
 .. AD 5C JC 4C QC 7C
 .. .. QS 2S 5H 1S 3C

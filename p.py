@@ -37,6 +37,91 @@ ag
 EOF
 """
 
+"""
+# use shell to display only every 100th game won/loss message:
+
+(base) kali@kali:~/Projects/python/solitaire-py$ python --version
+Python 3.9.7
+(base) kali@kali:~/Projects/python/solitaire-py$ python p.py <<EOF | grep "Game #" | awk '!(NR%100)'
+ag
+EOF
+"""
+
+"""
+# output of runs as of 13-dec-21
+                                       Game #8000 Won 1762 22.025%
+                                       Game #8100 Won 1786 22.049382716049383%
+                                       Game #8200 Won 1804 22.0%
+                                       Game #8300 Won 1822 21.951807228915662%
+                                       Game #8400 Won 1841 21.916666666666668%
+                                       Game #8500 Won 1863 21.91764705882353%
+                                       Game #8600 Won 1889 21.96511627906977%
+                                       Game #8700 Won 1903 21.873563218390803%
+                                       Game #8800 Won 1930 21.931818181818183%
+                                       Game #8900 Won 1949 21.898876404494384%
+                                       Game #9000 Won 1969 21.877777777777776%
+                                       Game #9100 Won 1987 21.835164835164836%
+                                       Game #9200 Won 2011 21.858695652173914%
+                                       Game #9300 Won 2034 21.870967741935484%
+                                       Game #9400 Won 2055 21.861702127659573%
+                                       Game #9500 Won 2079 21.88421052631579%
+                                       Game #9600 Won 2099 21.864583333333336%
+                                       Game #9700 Won 2113 21.783505154639172%
+
+"""
+
+"""
+# card display description
+nE = means no card here
+nS = normal card where n is the numeric value of the card (A,2,3,4,5,6,7,8,9,1,J,Q,K) and
+     S is the suit (H,S,C,D)
+"""
+
+"""
+#  discription board layout
+(base) kali@kali:~/Projects/python/solitaire-py$ python p.py
+Welcome to the Tournament shell. Type help or ? to list commands.
+
+tournament> mg
+Welcome to the Game shell. Type help or ? to list commands.
+
+game> ng
+
+play> db <--- command line
+nE  <--- suit pile
+nE  <--- suit pile
+nE  <--- suit pile
+nE  <--- suit pile
+
++--- deck of cards
+|
+| +--- bottom of deck (card on top of deck is placed here when deal deck dd command)
+| |
+| |                                               original top of deck card ---+
+| |                                                 this is end of game card   |
+| |                                                                            |
+| |             top card on deck (only visible/playable deck card) ---+        |
+| |                                                                   |        |
+V V                                                                   V        V
+:3D 9C 1D 9D 6H 8C 1C KD 2D 3S 4H 3H JS 4S 7S 5S 6D 2C AC KH QD 6C AS 7D   dc=:9C::
+nE nE nE nE nE nE nE
+
++--- card stacks
+|
+| only the cards on the diagonal are visible/playable
+| the cards not on the diagonal are not visible (unless cheating?)
+V
+QH 4D JD 1H JH 6S 8H
+.. AD 5C JC 4C QC 7C
+.. .. QS 2S 5H 1S 3C
+.. .. .. AH 9H 9S 7H
+.. .. .. .. KC KS 8S
+.. .. .. .. .. 5D 8D
+.. .. .. .. .. .. 2H
+play>  <--- command line
+
+"""
+
 # import color  # for ansi color codes
 from color import colors  # for ansi color codes
 

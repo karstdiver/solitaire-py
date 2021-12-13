@@ -5,7 +5,9 @@ http://www.openbookproject.net/books/bpp4awd/ch08.html
 """
 
 """
+# here is an example user game play
 $ clear;clear;python ./p.py
+(base) kali@kali:~/Projects/python/solitaire-py$ python p.py
 Welcome to the Tournament shell. Type help or ? to list commands.
 
 tournament> mg
@@ -16,18 +18,40 @@ nE
 nE
 nE
 nE
-:8D 9C 1C 9D 6D 1D 2H JH 4C 2C 6C 7D JD 3S 8C 5C 7S 2D JC 8S JS 9H 3C QH :
-KC 3H 1S 4H AC KS 5S
-.. 9S 6S 7H 8H QS 3D
-.. .. KD AH KH 4S 4D
-.. .. .. QC 2S AD QD
-.. .. .. .. 5D 7C 5H
-.. .. .. .. .. AS 1H
-.. .. .. .. .. .. 6H
+:AS AD 2S 6C 5D KH 5S KS 2H 9C 9H QS 7C AC 3S QC 6D 2D 8S 7S 2C 6S 9D KD   dc=:::
+nE nE nE nE nE nE nE
+QH JS 4C 5H QD 1S 8H
+.. 7H 3D JH JC 3H JD
+.. .. AH 1C 5C 8D KC
+.. .. .. 1H 7D 4S 6H
+.. .. .. .. 8C 9S 4H
+.. .. .. .. .. 4D 3C
+.. .. .. .. .. .. 1D
 Start playing the game. Type help or ? to list commands.
 
 play> m
+AHnE:1::S3:3:P3:0:v=300|us:0:su:0:False|ud:0:du:0:False|False:False:0:0
+7H8C:2::S2:2:S5:5:v=800|us:0:su:0:False|ud:0:du:0:False|False:False:0:0
 play> p
+doing move: AHnE:1::S3:3:P3:0:v=300|us:0:su:0:False|ud:0:du:0:False|False:False:0:0
+nE
+nE
+nE AH
+nE
+:AS AD 2S 6C 5D KH 5S KS 2H 9C 9H QS 7C AC 3S QC 6D 2D 8S 7S 2C 6S 9D KD   dc=:::
+nE nE nE nE nE nE nE
+QH JS 4C 5H QD 1S 8H
+.. 7H 3D JH JC 3H JD
+.. .. .. 1C 5C 8D KC
+.. .. .. 1H 7D 4S 6H
+.. .. .. .. 8C 9S 4H
+.. .. .. .. .. 4D 3C
+.. .. .. .. .. .. 1D
+play> exit
+We played 1 moves.
+game> exit
+tournament> exit
+(base) kali@kali:~/Projects/python/solitaire-py$
 """
 
 """
